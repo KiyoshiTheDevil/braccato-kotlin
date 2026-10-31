@@ -10,6 +10,7 @@ version = "1.0.0"
 kotlin {
     jvmToolchain(21)
     // Java 17 bytecode, so an Android module can take the library as it is.
+    compilerOptions { optIn.add("braccato.types.internal.InternalBraccatoApi") }
     jvm {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }

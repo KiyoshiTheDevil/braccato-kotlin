@@ -9,6 +9,7 @@ package braccato.parsers
 import braccato.types.Lyric
 import braccato.types.LyricPart
 import braccato.types.LyricTranslation
+import braccato.types.internal.*
 
 private val OFFSET_TIME_REGEX = Regex("""^([\d.]+)(h|m|s|ms)\z""")
 private val NON_NUMERIC_REGEX = Regex("""[^0-9.]""")

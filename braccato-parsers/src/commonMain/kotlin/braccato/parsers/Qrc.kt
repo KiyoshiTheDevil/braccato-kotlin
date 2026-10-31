@@ -3,6 +3,7 @@ package braccato.parsers
 
 import braccato.types.Lyric
 import braccato.types.LyricPart
+import braccato.types.internal.*
 import kotlin.math.abs
 import kotlin.math.max
 

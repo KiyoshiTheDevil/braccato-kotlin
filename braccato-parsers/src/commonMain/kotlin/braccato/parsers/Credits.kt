@@ -1,6 +1,8 @@
 // Port of packages/parsers/src/credits.ts.
 package braccato.parsers
 
+import braccato.types.internal.*
+
 private val FREE_TEXT_SEPARATORS = Regex("[/、，,]")
 private val CREDIT_LINE_REGEX = Regex("^([^:：]+)[:：]$WS*(.+)\\z")
 

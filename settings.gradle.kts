@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 
 include(":braccato-types")
 include(":braccato-parsers")
+include(":braccato-core")

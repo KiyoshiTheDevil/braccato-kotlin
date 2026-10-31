@@ -2,6 +2,7 @@
 package braccato.parsers
 
 import braccato.types.Lyric
+import braccato.types.internal.*
 
 private val SRT_TIME_REGEX = Regex("""^(\d+):(\d+):(\d+)[,.](\d+)\z""")
 private val BLOCK_SEPARATOR_REGEX = Regex("""\r?\n\r?\n""")

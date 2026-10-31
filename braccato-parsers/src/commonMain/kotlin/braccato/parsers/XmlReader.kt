@@ -16,6 +16,8 @@
 //   is the boolean `true` upstream. Attribute values are strings here, so it is the string "true".
 package braccato.parsers
 
+import braccato.types.internal.*
+
 internal class XmlReadException(message: String) : Exception(message)
 
 /**
