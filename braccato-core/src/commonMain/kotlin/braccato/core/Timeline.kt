@@ -278,6 +278,15 @@ class LyricsTimeline(
         scrollResumeTime = 0.0
     }
 
+    /**
+     * The lines were measured again: the view resized, the scroll padding changed, a decoration came
+     * in. The next tick scrolls to where the active lines now are, as upstream's `relayout` arranges by
+     * marking the view as scrolled.
+     */
+    fun noteRelayout() {
+        wasUserScrolling = true
+    }
+
     // -- Tick --------------------------
 
     /**

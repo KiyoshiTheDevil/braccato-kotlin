@@ -64,7 +64,7 @@ everything the renderer decides from numbers, under upstream's names where a fun
 | `types.ts`, word states in `constants.ts` | `Types.kt` |
 | `instrumental.ts` | `Instrumental.kt`: the SVG path data |
 | `imageHighlights.ts` | `ImageHighlights.kt`: `imageURL` |
-| `renderer.ts`, `element.ts`, `seek.ts`, `constants.ts` class names, `styles/*.css` | not ported; `braccato-compose` |
+| `renderer.ts`, `element.ts`, `seek.ts`, `constants.ts` class names, `styles/*.css` | `braccato-compose`, below |
 
 Selfchecks ported as tests: `stage`, `themeSettings`, `imageHighlights`, `wordState`, `instrumental`
 (the path shapes), the language inference in `language`, and the arithmetic checks in `engine`. The
@@ -76,6 +76,38 @@ model instead.
 swallowing the scroll events a programmatic scroll fires (`skipScrolls`), the two second lead
 animations are set up with, off-screen culling, `will-change` management, the debug canvas, and
 `swapLyrics` (rebuilding a view in place, which a Compose renderer does by keying its lines).
+
+### The renderer (`braccato-compose`)
+
+Not a line-by-line port: upstream's renderer is DOM, CSS and Web Animations. What is carried over is
+what it shows, with upstream's values.
+
+| Upstream | Kotlin (`braccato-compose/…/compose/`) |
+|---|---|
+| `styles/variables.css`, `lyrics.css`, `instrumental.css` defaults | `BraccatoTheme.kt` |
+| a theme's `--blyrics-*` custom properties | `BraccatoTheme.withCustomProperties`, `CssValues.kt` |
+| the keyframes and timings in `engine.ts` (`startWordAnimations`, `startLineAnimation`, wave, exit) | `Effects.kt`, sampled per frame |
+| the word span and highlight overlay from `inject.ts`, `.blyrics-word-highlight` | `WordView.kt` |
+| `.blyrics--line` and its decorations | `LyricLine.kt` |
+| `instrumental.ts`, `instrumental.css` | `InstrumentalNote.kt` |
+| `element.ts`, `renderer.ts`, scroll layout, per-line scroll in `engine.ts` | `BraccatoLyrics.kt` |
+| stage layout, `applyStage`, `stage.css` | `BraccatoStage.kt` |
+
+Differences in the renderer:
+
+- **Effects are sampled, not run.** Each frame computes every effect from the lyric time, so there is
+  nothing to keep in step with the song and nothing to reset after a seek.
+- **The glow is the lit highlight blurred on its own layer**, matching CSS `drop-shadow` (which
+  follows painted pixels) rather than a text shadow (which would follow whole glyphs).
+- **A lettered word sweeps with the word-level gradient** laid across its letters. For the default
+  linear swipe this is the same picture as upstream's per-letter masks; under a non-linear swipe
+  easing the letters reveal on the whole word's curve rather than each on its own.
+- **Lines are laid out in one scrolling column**, not culled off screen. Fine at song length; a lazy
+  list is the change to make if that ever matters.
+- **Not yet carried over:** image highlights (`blyrics-image-highlights`), the decoration entry
+  animation, the debug canvas, `swapLyrics`. CSS a theme writes beyond `--blyrics-*` properties
+  (selectors, `::before` labels, blurs on inactive lines) has no equivalent; only the properties
+  listed in `BraccatoTheme.withCustomProperties` are read.
 
 ## Differences on purpose
 
