@@ -1,0 +1,9 @@
+{
+  "name": "braccato-kotlin-upstream-compare",
+  "private": true,
+  "type": "module",
+  "description": "Runs the published JavaScript parsers over a folder of lyric files, so the Kotlin port can be compared against them.",
+  "dependencies": {
+    "@braccato/parsers": "0.4.0"
+  }
+}
