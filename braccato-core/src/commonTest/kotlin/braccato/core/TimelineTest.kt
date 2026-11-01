@@ -181,3 +181,60 @@ class TimelineTest {
         assertEquals(5.0, frame.passiveScrollTop!!, 1e-9)
     }
 }
+
+/**
+ * A source like Media3's `ExoPlayer.currentPosition`, which changes about ten times a second, read at
+ * 120 frames a second as kodama-next does on Android.
+ */
+class HeldReadingClockTest {
+    private val frameMs = 1000.0 / 120
+
+    /** The reading a 10 Hz source gives at a true time. */
+    private fun coarse(trueS: Double) = kotlin.math.floor(trueS * 10) / 10
+
+    @Test fun `a source that changes ten times a second still moves the swipe every frame`() {
+        val timeline = LyricsTimeline(song(10.0, 13.0), offsets = NO_OFFSETS)
+        val shown = mutableListOf<Double>()
+        val truths = mutableListOf<Double>()
+        for (frame in 0 until 240) {
+            val now = NOW + frame * frameMs
+            val trueS = 10.0 + frame * frameMs / 1000
+            shown += timeline.tick(coarse(trueS), PLAYING, now).lyricTime
+            truths += trueS
+        }
+
+        val steps = shown.drop(12).zipWithNext { a, b -> b - a }
+        assertTrue(steps.all { it >= 0 }, "the clock never runs backwards")
+        assertTrue(steps.max() < 0.03, "no frame jumps by anything like a 100 ms step (largest ${steps.max()})")
+        assertTrue(steps.count { it > 0 } > steps.size * 0.8, "the clock moves on nearly every frame")
+        assertTrue(
+            shown.zip(truths).drop(12).all { (s, t) -> s - t in -0.11..MAX_HELD_LEAD_S },
+            "it stays with the song, never further ahead than the cap",
+        )
+    }
+
+    @Test fun `a seek back is taken at once`() {
+        val timeline = LyricsTimeline(song(10.0, 13.0), offsets = NO_OFFSETS)
+        for (frame in 0 until 60) timeline.tick(coarse(20.0 + frame * frameMs / 1000), PLAYING, NOW + frame * frameMs)
+
+        val after = timeline.tick(12.0, PLAYING, NOW + 60 * frameMs).lyricTime
+        assertEquals(12.0, after, 1e-9)
+    }
+
+    @Test fun `a stalled source is carried no further than the cap`() {
+        val timeline = LyricsTimeline(song(10.0, 13.0), offsets = NO_OFFSETS)
+        var last = 0.0
+        for (frame in 0 until 120) last = timeline.tick(15.0, PLAYING, NOW + frame * frameMs).lyricTime
+
+        assertEquals(15.0 + MAX_HELD_LEAD_S, last, 1e-9)
+    }
+
+    @Test fun `a paused reading is shown as it is`() {
+        val timeline = LyricsTimeline(song(10.0, 13.0), offsets = NO_OFFSETS)
+        val paused = TickOptions(isPlaying = false)
+        timeline.tick(15.0, PLAYING, NOW)
+        timeline.tick(15.0, PLAYING, NOW + 100)
+
+        assertEquals(15.0, timeline.tick(15.0, paused, NOW + 200).lyricTime, 1e-9)
+    }
+}

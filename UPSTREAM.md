@@ -130,6 +130,11 @@ Differences in the renderer:
   passive scroll) as a `TimelineFrame` and the renderer acts on them. The rules are upstream's.
 - **One playback clock per timeline**, where upstream's is module scope and shared by every view in
   a bundle. Clock smoothing, on for Gecko upstream, is off unless asked for.
+- **Held readings are carried forward** (`PlaybackClock.interpolateHeldReadings`, on by default). Not
+  in upstream, whose media element moves every frame: Media3's `ExoPlayer.currentPosition` changes
+  about ten times a second, which made the swipe move in 100 ms steps on Android. A repeated reading
+  runs on the wall clock, at most 250 ms ahead, and the clock never steps back for a source that is
+  moving forward.
 - **Theme settings are registered together** in `CoreSettings.kt`. Upstream registers each where
   it is used, at import; Kotlin initialises top-level values on first use, which would leave a
   setting first read after a theme was applied at its default.

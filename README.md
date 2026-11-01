@@ -83,6 +83,12 @@ BraccatoLyrics(
 )
 ```
 
+`playback` can hand over a player's position as it is, even one that moves in coarse steps: Media3's
+`ExoPlayer.currentPosition` changes about ten times a second, and while a song plays the view carries
+a reading the player keeps repeating forward on the wall clock (at most 250 ms, never backwards), so
+the swipe still moves every frame. A host that knows when its reading was taken can pass
+`sampledAtMs` instead, and the view extrapolates from that.
+
 `BraccatoStage` is the subtitle layout. `rememberBraccatoLyricsState()` reports when the user has
 scrolled the view away (`resumeAffordanceVisible`) and brings autoscroll back (`resumeAutoscroll()`).
 

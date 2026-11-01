@@ -58,13 +58,27 @@ data class ClockReading(
     val pausedSeek: Boolean,
 )
 
+/** How far a held reading is carried forward before the clock waits for the source. */
+const val MAX_HELD_LEAD_S = 0.25
+
 /**
  * The last player snapshot, and how the next one is read against it.
  *
- * @param smoothSteppedClock Smooth a media clock that steps rather than runs. Upstream turns this on
- *   for Gecko only. Off by default.
+ * @param smoothSteppedClock Smooth a media clock that steps rather than runs, the way upstream does for
+ *   Gecko's ~40 ms steps. Off by default; [interpolateHeldReadings] covers coarser sources.
+ * @param interpolateHeldReadings Carry a reading forward on the wall clock while the source repeats it.
+ *   Not upstream's: a browser's media clock moves every frame, but some players do not. Media3's
+ *   `ExoPlayer.currentPosition` changes about ten times a second, and the swipe drawn from it would
+ *   move in 100 ms steps. While playing without a snapshot, a reading the source keeps returning
+ *   runs on from when it first appeared, at most [MAX_HELD_LEAD_S] ahead of it; a new reading that
+ *   lands behind what was already shown holds the clock until the source catches up, rather than
+ *   running the swipe backwards. A source that moves every frame never repeats a reading, so this
+ *   changes nothing for it. On by default.
  */
-class PlaybackClock(private val smoothSteppedClock: Boolean = false) {
+class PlaybackClock(
+    private val smoothSteppedClock: Boolean = false,
+    private val interpolateHeldReadings: Boolean = true,
+) {
     var lastTime = 0.0
         private set
     var lastPlayState = false
@@ -72,6 +86,9 @@ class PlaybackClock(private val smoothSteppedClock: Boolean = false) {
     private var lastEventCreationTime = NO_PLAYER_SNAPSHOT
     private var smoothedTime = 0.0
     private var smoothedAt = NO_PLAYER_SNAPSHOT
+    private var heldReading = Double.NaN
+    private var heldSince = 0.0
+    private var lastShown = Double.NaN
 
     /**
      * Forgets the last player snapshot, so the next tick is treated as the first one of a new song
@@ -82,6 +99,8 @@ class PlaybackClock(private val smoothSteppedClock: Boolean = false) {
         lastPlayState = false
         lastEventCreationTime = NO_PLAYER_SNAPSHOT
         smoothedAt = NO_PLAYER_SNAPSHOT
+        heldReading = Double.NaN
+        lastShown = Double.NaN
     }
 
     fun read(currentTime: Double, options: ResolvedTickOptions, now: Double): ClockReading {
@@ -116,9 +135,32 @@ class PlaybackClock(private val smoothSteppedClock: Boolean = false) {
             }
             smoothedTime = time
             smoothedAt = if (isPlaying) now else NO_PLAYER_SNAPSHOT
+        } else if (interpolateHeldReadings && isPlaying && eventCreationTime == NO_PLAYER_SNAPSHOT) {
+            time = carryHeldReading(currentTime, now, options.playbackRate)
+        } else {
+            heldReading = Double.NaN
+            lastShown = Double.NaN
         }
 
         return ClockReading(time = time, timeJumped = timeJumped, mediaSteppedBack = mediaSteppedBack, pausedSeek = pausedSeek)
+    }
+
+    private fun carryHeldReading(reading: Double, now: Double, playbackRate: Double): Double {
+        val previousReading = heldReading
+        if (reading != heldReading) {
+            heldReading = reading
+            heldSince = now
+        }
+        val carriedS = max(0.0, now - heldSince) / 1000 * playbackRate
+        var shown = reading + min(carriedS, MAX_HELD_LEAD_S)
+        // The source moved on, by less than the clock had already run ahead: wait for it rather than
+        // step back. A source that went back (a seek, a loop) is taken as it is.
+        val previous = lastShown
+        if (!previous.isNaN() && !previousReading.isNaN() && reading >= previousReading && shown < previous) {
+            shown = previous
+        }
+        lastShown = shown
+        return shown
     }
 }
 
