@@ -62,7 +62,7 @@ class RenderTest {
     }
 
     @OptIn(ExperimentalComposeUiApi::class)
-    @Test fun `streams a translation in and takes it out again`() {
+    @Test fun `switches translations on and off for every line`() {
         val plain = buildLyrics(parseTTMLContent(SAMPLE_TTML.replace(Regex("<translations>.*?</translations>"), "")).lyrics)
         val streamed = androidx.compose.runtime.mutableStateMapOf<Int, String>()
         var wall = 0.0
@@ -84,7 +84,8 @@ class RenderTest {
 
         for (n in 0..60) frame(n)
         save(61, "decoration-0-before")
-        streamed[1] = "Wir steigen höher, als wir je waren"
+        // Every line at once, as switching translations on does.
+        for (line in plain.lines) if (!line.isInstrumental) streamed[line.index] = "Übersetzung von Zeile ${line.index}"
         save(62, "decoration-1-arriving")
         save(63, "decoration-1b-arriving")
         save(64, "decoration-1c-arriving")
@@ -92,7 +93,7 @@ class RenderTest {
         save(68, "decoration-2-midway")
         for (n in 69..140) frame(n)
         save(141, "decoration-3-settled")
-        streamed.remove(1)
+        streamed.clear()
         for (n in 142..147) frame(n)
         save(148, "decoration-4-leaving")
         for (n in 149..240) frame(n)

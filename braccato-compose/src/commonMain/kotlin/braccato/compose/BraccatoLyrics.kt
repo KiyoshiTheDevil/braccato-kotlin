@@ -112,7 +112,11 @@ private class ScrollStagger(
  * The lines a decoration moved, sliding from where they were to where it put them:
  * `captureDecorationSlide` upstream. One entry per line, then the credits.
  */
-private class DecorationSlide(val startMs: Double, val shifts: DoubleArray)
+private class DecorationSlide(val shifts: DoubleArray) {
+    /** Until the next frame anchors it, the slide holds every line where it was. */
+    var startMs = Double.POSITIVE_INFINITY
+    var anchored = false
+}
 
 private fun BraccatoTheme.slideOffset(slide: DecorationSlide, index: Int, nowMs: Double): Float {
     val shift = slide.shifts.getOrElse(index) { 0.0 }
@@ -182,6 +186,8 @@ fun BraccatoLyrics(
     val slides = remember(lyrics) { mutableStateListOf<DecorationSlide>() }
     // How many more frames a decoration that just came or went may take to move the lines.
     val decorationShiftFrames = remember(lyrics) { IntArray(1) }
+    // The line the view last followed, which a decoration's shift is anchored on; -1 before any.
+    val scrollAnchor = remember(lyrics) { intArrayOf(-1) }
 
     /**
      * A line was placed: if a decoration just moved it, it slides from where it was. Read during
@@ -189,10 +195,8 @@ fun BraccatoLyrics(
      */
     fun notePlaced(index: Int, y: Double, was: Double) {
         if (decorationShiftFrames[0] <= 0 || was == 0.0 && index > 0 || abs(was - y) < DECORATION_MIN_SHIFT_PX) return
-        if (!currentTheme.animations.decorationEntry) return
-        val wall = clock.wallMs
-        val slide = slides.lastOrNull()?.takeIf { it.startMs == wall }
-            ?: DecorationSlide(wall, DoubleArray(lines.size + 1)).also { slides += it }
+        val slide = slides.lastOrNull()?.takeIf { !it.anchored }
+            ?: DecorationSlide(DoubleArray(lines.size + 1)).also { slides += it }
         slide.shifts[index] = was - y
     }
     var creditsFocused by remember(lyrics) { mutableStateOf(false) }
@@ -241,6 +245,22 @@ fun BraccatoLyrics(
                 }
 
                 if (decorationShiftFrames[0] > 0) decorationShiftFrames[0]--
+
+                // A decoration that came or went moved the lines. Keep the line the view follows where
+                // it is on screen, by scrolling as far as it moved, and let every other line slide from
+                // where it was to its new place around it. Upstream slides and then scrolls back, which
+                // carries the line being sung away and back; this holds it still.
+                for (slide in slides) {
+                    if (slide.anchored) continue
+                    val anchor = scrollAnchor[0]
+                    val moved = if (anchor in slide.shifts.indices) -slide.shifts[anchor] else 0.0
+                    val consumed = if (moved != 0.0) scrollState.dispatchRawDelta(moved.toFloat()).toDouble() else 0.0
+                    for (i in slide.shifts.indices) {
+                        slide.shifts[i] = if (theme.animations.decorationEntry) slide.shifts[i] + consumed else 0.0
+                    }
+                    slide.startMs = wall
+                    slide.anchored = true
+                }
                 slides.removeAll { wall - it.startMs > theme.decorationEntryMs + 50 }
 
                 if (viewport != null) {
@@ -269,6 +289,7 @@ fun BraccatoLyrics(
 
                 staggers.removeAll { wall - it.startMs > 2500 }
                 val scroll = frame.scroll
+                if (scroll != null) scrollAnchor[0] = scroll.anchorIndex
                 if (scroll != null && scroll.action == ScrollAction.COMMIT) {
                     val delta = scroll.targetScrollTop - scrollState.value
                     if (abs(delta) >= 1) {

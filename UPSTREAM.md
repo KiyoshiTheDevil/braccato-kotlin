@@ -122,8 +122,11 @@ Differences in the renderer:
   list is the change to make if that ever matters.
 - **Decorations come and go as upstream's do, and leave gently too.** A translation or romanization
   that arrives fades and drops in (`blyrics-decoration-in`, 350 ms) and the lines it moved slide from
-  where they were (`captureDecorationSlide`), then the view scrolls to the active line again. Upstream
-  takes one away at once; here it fades and lifts out over the same time before the lines close up.
+  where they were (`captureDecorationSlide`). Upstream takes one away at once; here it fades and lifts
+  out over the same time before the lines close up. One difference in how the lines move: upstream
+  slides them and then scrolls back to the active line, so switching translations on for a whole song
+  carries the line being sung away and back. Here the scroll moves with the line the view follows
+  in the same frame, so it stays where it is while the others slide into place around it.
 - **Not yet carried over:** image highlights (`blyrics-image-highlights`), the debug canvas,
   `swapLyrics`. CSS a theme writes beyond `--blyrics-*` properties
   (selectors, `::before` labels, blurs on inactive lines) has no equivalent; only the properties
