@@ -162,9 +162,10 @@ internal fun WordView(
                     }
                     .graphicsLayer {
                         val state = highlightAt(theme, word, context.effectiveEnd, context.time())
-                        val radius = state.glow * context.glowRadiusPx
-                        alpha = if (radius > 0.5f) state.opacity else 0f
-                        renderEffect = if (radius > 0.5f) BlurEffect(radius, radius, TileMode.Decal) else null
+                        val cssRadius = state.glow * context.glowRadiusPx
+                        val radius = composeBlurRadiusFor(cssRadius)
+                        alpha = if (cssRadius > 0.5f) state.opacity else 0f
+                        renderEffect = if (cssRadius > 0.5f) BlurEffect(radius, radius, TileMode.Decal) else null
                     }
                     .drawBehind {
                         val t = context.time()
@@ -183,3 +184,18 @@ internal fun WordView(
 }
 
 internal fun Float.px(): Int = roundToInt()
+
+/** What Compose's `BlurEffect` turns a radius into: `BlurEffect.convertRadiusToSigma`. */
+private const val COMPOSE_SIGMA_SCALE = 0.57735f
+private const val COMPOSE_SIGMA_OFFSET = 0.5f
+
+/**
+ * The `BlurEffect` radius that blurs as much as a CSS `drop-shadow` with [cssRadius] does. CSS takes a
+ * shadow's blur radius as twice the Gaussian's standard deviation; Compose takes its radius as
+ * `0.57735 * r + 0.5`. Passed straight through, upstream's 0.8rem glow would spread about a fifth
+ * wider and read softer than it does in the browser.
+ */
+internal fun composeBlurRadiusFor(cssRadius: Float): Float {
+    val sigma = cssRadius / 2
+    return ((sigma - COMPOSE_SIGMA_OFFSET) / COMPOSE_SIGMA_SCALE).coerceAtLeast(0.01f)
+}
