@@ -1,5 +1,6 @@
-// One timed word: upstream's word span and its highlight overlay, drawn as one node. The base text
-// is drawn in the inactive colour; the highlight is the same text in the active colour under a
+// One timed word: upstream's word span and its highlight overlay, drawn as one node. While its line
+// animates, the glyphs are drawn from bitmaps (GlyphCache.kt says why). The base text is drawn in the
+// inactive colour; the highlight is the same text in the active colour under a
 // horizontal gradient that the swipe moves across it; the glow is that highlight again, blurred, on
 // a layer of its own. A lettered word lays its graphemes out one by one so each can ride its wave.
 package braccato.compose
@@ -36,6 +37,9 @@ internal class WordLayout {
     var xs: FloatArray = FloatArray(0)
     var width = 0f
     var height = 0f
+
+    /** The runs as bitmaps, while the word moves; dropped once it is at rest again. */
+    var bitmaps: List<GlyphBitmap>? = null
 }
 
 /** Everything a word needs from the line it is in, to decide how it looks at a time. */
@@ -51,6 +55,12 @@ internal class WordContext(
 )
 
 private fun measureWord(measurer: TextMeasurer, word: BuiltWord, style: TextStyle, maxWidth: Int, into: WordLayout) {
+    val before = into.runs.map { it.size }
+    measureRuns(measurer, word, style, maxWidth, into)
+    if (into.runs.map { it.size } != before) into.bitmaps = null
+}
+
+private fun measureRuns(measurer: TextMeasurer, word: BuiltWord, style: TextStyle, maxWidth: Int, into: WordLayout) {
     val letters = word.letters
     val constraints = Constraints(maxWidth = maxWidth.coerceAtLeast(1))
     if (letters != null && letters.size > 1) {
@@ -71,18 +81,18 @@ private inline fun DrawScope.drawRuns(
     layout: WordLayout,
     lifts: List<LetterLift>?,
     emPx: Float,
-    draw: DrawScope.(TextLayoutResult, Float) -> Unit,
+    draw: DrawScope.(Int, TextLayoutResult, Float) -> Unit,
 ) {
     layout.runs.forEachIndexed { i, run ->
         val x = layout.xs[i]
         val lift = lifts?.getOrNull(i)
         if (lift == null || (lift.translateEm == 0f && lift.scale == 1f)) {
-            translate(left = x) { draw(run, x) }
+            translate(left = x) { draw(i, run, x) }
         } else {
             withTransform({
                 translate(left = x, top = lift.translateEm * emPx)
                 scale(lift.scale, lift.scale, pivot = Offset(run.size.width / 2f, run.size.height / 2f))
-            }) { draw(run, x) }
+            }) { draw(i, run, x) }
         }
     }
 }
@@ -124,16 +134,18 @@ internal fun WordView(
             }
             .drawBehind {
                 if (!context.live) {
-                    drawRuns(layout, null, context.emPx) { run, _ -> drawText(run, color = context.baseColor) }
+                    layout.bitmaps = null
+                    drawRuns(layout, null, context.emPx) { _, run, _ -> drawText(run, color = context.baseColor) }
                     return@drawBehind
                 }
+                val bitmaps = layout.bitmaps ?: layout.runs.map { renderGlyphs(it) }.also { layout.bitmaps = it }
                 val t = context.time()
                 val lifts = lifts(t)
-                drawRuns(layout, lifts, context.emPx) { run, _ -> drawText(run, color = context.baseColor) }
+                drawRuns(layout, lifts, context.emPx) { i, _, _ -> drawGlyphs(bitmaps[i], context.baseColor) }
                 val state = highlightAt(theme, word, context.effectiveEnd, t)
                 if (state.opacity <= 0f) return@drawBehind
-                drawRuns(layout, lifts, context.emPx) { run, x ->
-                    drawText(run, brush = highlightBrush(state, layout.width, word.isRtl, x, activeColor), alpha = state.opacity)
+                drawRuns(layout, lifts, context.emPx) { i, _, x ->
+                    drawGlyphs(bitmaps[i], highlightBrush(state, layout.width, word.isRtl, x, activeColor), state.opacity)
                 }
             },
     ) {
@@ -158,9 +170,10 @@ internal fun WordView(
                         val t = context.time()
                         val state = highlightAt(theme, word, context.effectiveEnd, t)
                         if (state.glow <= 0f || state.opacity <= 0f) return@drawBehind
+                        val bitmaps = layout.bitmaps ?: return@drawBehind
                         translate(margin.toFloat(), margin.toFloat()) {
-                            drawRuns(layout, lifts(t), context.emPx) { run, x ->
-                                drawText(run, brush = highlightBrush(state, layout.width, word.isRtl, x, theme.glowColor))
+                            drawRuns(layout, lifts(t), context.emPx) { i, _, x ->
+                                drawGlyphs(bitmaps[i], highlightBrush(state, layout.width, word.isRtl, x, theme.glowColor))
                             }
                         }
                     },

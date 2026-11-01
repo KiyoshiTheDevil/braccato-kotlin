@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
@@ -233,7 +232,7 @@ internal fun LyricLine(
                             val timedContext = WordContext(theme, effectiveEnd, live, time, emPx / 1.25f, glowRadiusPx / 1.25f, theme.inactiveColor)
                             ContentFlow(timed.main, style.copy(color = Color.Unspecified), measurer, timedContext, Alignment.Start)
                         } else {
-                            BasicText(romanization.text, style = style)
+                            MotionText(romanization.text, style, live)
                         }
                     }
                 }
@@ -252,7 +251,7 @@ internal fun LyricLine(
                 }
                 val translatedDirection = if (translation.direction == TextDirection.RTL) LayoutDirection.Rtl else LayoutDirection.Ltr
                 CompositionLocalProvider(LocalLayoutDirection provides translatedDirection) {
-                    BasicText(translation.text, Modifier.padding(top = 8.dp), style = style)
+                    MotionText(translation.text, style, live, Modifier.padding(top = 8.dp))
                 }
             }
         }

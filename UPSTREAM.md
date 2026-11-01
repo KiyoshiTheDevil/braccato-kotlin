@@ -97,6 +97,11 @@ Differences in the renderer:
 
 - **Effects are sampled, not run.** Each frame computes every effect from the lyric time, so there is
   nothing to keep in step with the song and nothing to reset after a seek.
+- **Moving words are drawn from a bitmap.** Skia places glyphs on a quarter-pixel grid and
+  rasterizes them again at every scale, so text under a slow zoom or a small lift moves in visible
+  steps. While a line animates, its words are rendered once at their own size and the bitmap is
+  transformed, as a browser does with a `will-change: transform` layer; at rest they are plain text.
+  `SmoothnessTest` measures the difference.
 - **The glow is the lit highlight blurred on its own layer**, matching CSS `drop-shadow` (which
   follows painted pixels) rather than a text shadow (which would follow whole glyphs).
 - **A lettered word sweeps with the word-level gradient** laid across its letters. For the default
