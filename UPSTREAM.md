@@ -102,6 +102,14 @@ Differences in the renderer:
   steps. While a line animates, its words are rendered once at their own size and the bitmap is
   transformed, as a browser does with a `will-change: transform` layer; at rest they are plain text.
   `SmoothnessTest` measures the difference.
+- **Wrapping follows upstream's word groups, with one addition.** Syllables with no space between
+  them form a group. A group of up to twice `blyrics-long-word-wrap-threshold` characters moves to
+  the next line whole and wobbles as one, as upstream's inline-block does; a longer group fills the
+  line and breaks between syllables (`.blyrics-word-group-long`, inline, so it does not wobble).
+  Breaks inside a group follow the line breaking rules for CJK (none before 、。」ー or a small kana,
+  none after 「（), and Latin syllables never part (`LineBreaking.kt`). The addition: a short group too
+  wide for even an empty line breaks the same way, where upstream lets it run out of the view. In
+  practice that is CJK, written without spaces, on a phone.
 - **The glow is the lit highlight blurred on its own layer**, matching CSS `drop-shadow` (which
   follows painted pixels) rather than a text shadow (which would follow whole glyphs).
 - **A lettered word sweeps with the word-level gradient** laid across its letters. For the default

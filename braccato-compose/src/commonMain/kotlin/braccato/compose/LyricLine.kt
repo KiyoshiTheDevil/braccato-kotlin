@@ -3,16 +3,12 @@
 // translation; or, for an instrumental line, the note.
 package braccato.compose
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextMeasurer
@@ -104,8 +102,31 @@ internal fun BraccatoTheme.lineTextStyle(density: androidx.compose.ui.unit.Densi
         )
     }
 
-/** The words of one content line, wrapped the way upstream's word groups wrap: whole groups at a time. */
-@OptIn(ExperimentalLayoutApi::class)
+/** What the flow layout decided for one word, read by its wobble each frame. */
+private class FlowSlot {
+    /** Whether the word's group wobbles: it was laid out whole. */
+    var wobbles = false
+
+    /** The time of the group's first syllable, which the group wobbles from. */
+    var groupTime = 0.0
+
+    /** How far the word's centre is from its group's centre, which a group's scaleX moves it by. */
+    var fromGroupCentre = 0f
+}
+
+/**
+ * The words of one content line, wrapped the way upstream wraps them.
+ *
+ * A group of syllables with no space between them is an inline-block upstream, which moves to the
+ * next line whole and wobbles as one. A long group (`.blyrics-word-group-long`) is inline instead,
+ * so it fills the line and breaks between syllables where the line breaking rules allow, and does not
+ * wobble, since a CSS transform does not apply to an inline box. One addition: a short group too wide
+ * for even an empty line breaks the same way rather than running out of the view, which upstream
+ * lets it do. In practice that is CJK, written without spaces.
+ *
+ * Each word is measured at its full width, whatever room is left, so words never squeeze into each
+ * other at the end of a line.
+ */
 @Composable
 private fun ContentFlow(
     content: ContentLine,
@@ -115,24 +136,114 @@ private fun ContentFlow(
     alignment: Alignment.Horizontal,
     modifier: Modifier = Modifier,
 ) {
-    val density = LocalDensity.current
-    val space = remember(style) { with(density) { measurer.measure(" ", style).size.width.toDp() } }
-    FlowRow(
-        modifier,
-        horizontalArrangement = Arrangement.spacedBy(space, alignment),
-    ) {
-        for (item in content.items) {
-            if (item !is LineItem.Group) continue
-            val first = item.words.firstOrNull() ?: continue
-            Row(
-                Modifier.graphicsLayer {
-                    if (!context.live || !first.wobbles) return@graphicsLayer
-                    val wobble = wobbleAt(context.theme, first.time, context.effectiveEnd, context.time())
-                    translationX = wobble.translateEm * context.emPx
-                    scaleX = wobble.scaleX
-                },
-            ) {
-                for (word in item.words) WordView(word, style, measurer, context)
+    val spacePx = remember(style) { measurer.measure(" ", style).size.width }
+    // Each group, and whether a space comes before it.
+    val groups = remember(content) {
+        var pendingSpace = false
+        buildList {
+            for (item in content.items) {
+                when (item) {
+                    is LineItem.Space -> pendingSpace = true
+                    is LineItem.Group -> if (item.words.isNotEmpty()) {
+                        add(item to pendingSpace)
+                        pendingSpace = false
+                    }
+                }
+            }
+        }
+    }
+    val words = remember(groups) { groups.flatMap { it.first.words } }
+    val slots = remember(words) { List(words.size) { FlowSlot() } }
+
+    Layout(
+        content = {
+            words.forEachIndexed { index, word ->
+                val slot = slots[index]
+                WordView(
+                    word,
+                    style,
+                    measurer,
+                    context,
+                    Modifier.graphicsLayer {
+                        if (!context.live || !slot.wobbles) return@graphicsLayer
+                        val wobble = wobbleAt(context.theme, slot.groupTime, context.effectiveEnd, context.time())
+                        translationX = wobble.translateEm * context.emPx + slot.fromGroupCentre * (wobble.scaleX - 1)
+                        scaleX = wobble.scaleX
+                    },
+                )
+            }
+        },
+        modifier = modifier,
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(Constraints()) }
+        val maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
+
+        // Positions along each line, in reading order.
+        val lines = mutableListOf(mutableListOf<Pair<Int, Int>>())
+        val lineWidths = mutableListOf(0)
+        var x = 0
+        fun newLine() {
+            lineWidths[lineWidths.lastIndex] = x
+            lines += mutableListOf<Pair<Int, Int>>()
+            lineWidths += 0
+            x = 0
+        }
+        fun put(index: Int) {
+            lines.last() += index to x
+            x += placeables[index].width
+        }
+
+        var first = 0
+        for ((group, spaceBefore) in groups) {
+            val indices = first until first + group.words.size
+            first += group.words.size
+            val groupWidth = indices.sumOf { placeables[it].width }
+            if (spaceBefore && x > 0) x += spacePx
+
+            if (!group.isLong && groupWidth <= maxWidth) {
+                if (x + groupWidth > maxWidth && x > 0) newLine()
+                val groupStart = x
+                for (i in indices) {
+                    slots[i].wobbles = true
+                    slots[i].groupTime = group.words[0].time
+                    slots[i].fromGroupCentre = (x + placeables[i].width / 2f) - (groupStart + groupWidth / 2f)
+                    put(i)
+                }
+                continue
+            }
+
+            // Inline: fill the line, breaking between syllables where the rules allow, and anywhere at
+            // all within a run that is wider than a whole line.
+            val segments = mutableListOf(mutableListOf(indices.first))
+            for (i in indices.drop(1)) {
+                if (canBreakBetween(words[i - 1].text, words[i].text)) segments += mutableListOf(i) else segments.last() += i
+            }
+            for (segment in segments) {
+                val segmentWidth = segment.sumOf { placeables[it].width }
+                if (x + segmentWidth > maxWidth && x > 0) newLine()
+                for (i in segment) {
+                    slots[i].wobbles = false
+                    if (segmentWidth > maxWidth && x + placeables[i].width > maxWidth && x > 0) newLine()
+                    put(i)
+                }
+            }
+        }
+        lineWidths[lineWidths.lastIndex] = x
+
+        val width = lineWidths.max().coerceIn(constraints.minWidth, maxWidth)
+        val lineHeights = lines.map { line -> line.maxOfOrNull { (i, _) -> placeables[i].height } ?: 0 }
+        val height = lineHeights.sum()
+        val rtl = layoutDirection == LayoutDirection.Rtl
+        layout(width, height) {
+            var y = 0
+            lines.forEachIndexed { l, line ->
+                val lineLeft = alignment.align(lineWidths[l], width, layoutDirection)
+                for ((i, along) in line) {
+                    val placeable = placeables[i]
+                    val left = if (rtl) lineLeft + lineWidths[l] - along - placeable.width else lineLeft + along
+                    placeable.place(left, y)
+                }
+                y += lineHeights[l]
             }
         }
     }

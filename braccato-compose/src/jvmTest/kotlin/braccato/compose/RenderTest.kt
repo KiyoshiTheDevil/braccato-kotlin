@@ -31,15 +31,15 @@ private val SAMPLE_TTML = """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="ht
 </div></body></tt>"""
 
 @OptIn(ExperimentalComposeUiApi::class)
-private fun render(lyrics: BuiltLyrics, atS: Double, name: String, width: Int = 900, height: Int = 700, stage: Boolean = false) {
+private fun render(lyrics: BuiltLyrics, atS: Double, name: String, width: Int = 900, height: Int = 700, stage: Boolean = false, theme: BraccatoTheme = BraccatoTheme.Default) {
     var wall = 0.0
     val scene = ImageComposeScene(width, height, Density(1f)) {
         val modifier = Modifier.fillMaxSize().background(Color(0xFF15121C))
         val playback = { PlaybackSnapshot(timeS = atS, isPlaying = true) }
         if (stage) {
-            BraccatoStage(lyrics, playback, modifier, wallClockMs = { wall })
+            BraccatoStage(lyrics, playback, modifier, theme = theme, wallClockMs = { wall })
         } else {
-            BraccatoLyrics(lyrics, playback, modifier, wallClockMs = { wall })
+            BraccatoLyrics(lyrics, playback, modifier, theme = theme, wallClockMs = { wall })
         }
     }
     // Play up to the time, as a player would, so the view arrives the way it does in use.
@@ -94,6 +94,10 @@ class RenderTest {
         val text = File(path).readText()
         val parser = braccato.parsers.detectParser(text)
         val lyrics = buildLyrics(parser.parse(text, 240000.0), SetLyricsOptions(songwriters = parser.metadata(text).songwriters))
-        render(lyrics, atS, "file-$atS")
+        // BRACCATO_RENDER_WIDTH and BRACCATO_RENDER_FONT (dp) narrow the view, as on a phone.
+        val width = System.getenv("BRACCATO_RENDER_WIDTH")?.toInt() ?: 900
+        val font = System.getenv("BRACCATO_RENDER_FONT")?.toFloat()
+        val theme = font?.let { BraccatoTheme(fontSize = androidx.compose.ui.unit.Dp(it), translatedFontSize = androidx.compose.ui.unit.Dp(it * 2 / 3)) } ?: BraccatoTheme.Default
+        render(lyrics, atS, "file-$atS", width = width, theme = theme)
     }
 }
