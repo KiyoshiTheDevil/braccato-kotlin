@@ -76,7 +76,9 @@ fun BraccatoStage(
     wallClockMs: (() -> Double)? = null,
 ) {
     val lines = lyrics.lines
-    val timeline = remember(lyrics, theme.timingOffsets) { LyricsTimeline(lyrics, LyricsLayout.STAGE, theme.timingOffsets) }
+    // The song on screen, so lyrics built again with the same lines keep the view as it is.
+    val song = remember(lyrics) { lyrics.songIdentity() }
+    val timeline = remember(song, theme.timingOffsets) { LyricsTimeline(lyrics, LyricsLayout.STAGE, theme.timingOffsets) }
     val items = remember(timeline) { timeline.stageItems() }
     val monotonic = remember { TimeSource.Monotonic.markNow() }
     val now = wallClockMs ?: { monotonic.elapsedNow().inWholeMicroseconds / 1000.0 }
@@ -84,14 +86,14 @@ fun BraccatoStage(
     val currentOptions by rememberUpdatedState(tickOptions)
     val currentOnStageLayout by rememberUpdatedState(onStageLayout)
 
-    val clock = remember(lyrics) { LyricClock() }
-    val effectiveEnds = remember(lyrics) { lines.indices.map { effectiveEndTime(lines, it) } }
-    var roles by remember(lyrics) { mutableStateOf(List(items.size) { StageRole.QUEUED }) }
-    val heights = remember(lyrics) { mutableStateListOf<Float>().apply { repeat(items.size) { add(0f) } } }
-    val widths = remember(lyrics) { FloatArray(items.size) }
-    var lastBox by remember(lyrics) { mutableStateOf<StageBox?>(null) }
+    val clock = remember(song) { LyricClock() }
+    val effectiveEnds = remember(song) { lines.indices.map { effectiveEndTime(lines, it) } }
+    var roles by remember(song) { mutableStateOf(List(items.size) { StageRole.QUEUED }) }
+    val heights = remember(song) { mutableStateListOf<Float>().apply { repeat(items.size) { add(0f) } } }
+    val widths = remember(song) { FloatArray(items.size) }
+    var lastBox by remember(song) { mutableStateOf<StageBox?>(null) }
     // Sides only when both are sung, so a song with one singer stays centred whichever voice it is.
-    val isDuet = remember(lyrics) {
+    val isDuet = remember(song) {
         val sung = lines.filter { !it.isInstrumental && !it.isBlank && it.agent != "v1000" }
         val onRight = { line: BuiltLine -> line.agent == "v2" || line.agent == "v3" }
         sung.any(onRight) && sung.any { !onRight(it) }

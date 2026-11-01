@@ -108,6 +108,11 @@ BraccatoLyrics(
 )
 ```
 
+Lyrics built again for the same song, with nothing but other translations or romanizations on their
+lines, are taken as the same song too: the view keeps its scroll and place and only the decorations
+change, as upstream's `songKey` swap does. `decorations` is still the lighter way, since nothing is
+built twice.
+
 `BraccatoStage` is the subtitle layout. `rememberBraccatoLyricsState()` reports when the user has
 scrolled the view away (`resumeAffordanceVisible`) and brings autoscroll back (`resumeAutoscroll()`).
 

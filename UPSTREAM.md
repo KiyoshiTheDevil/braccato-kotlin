@@ -127,8 +127,11 @@ Differences in the renderer:
   slides them and then scrolls back to the active line, so switching translations on for a whole song
   carries the line being sung away and back. Here the scroll moves with the line the view follows
   in the same frame, so it stays where it is while the others slide into place around it.
-- **Not yet carried over:** image highlights (`blyrics-image-highlights`), the debug canvas,
-  `swapLyrics`. CSS a theme writes beyond `--blyrics-*` properties
+- **No `swapLyrics`, but the same effect for the common case.** The view keys its state on the song
+  rather than on the lyrics object: lyrics built again with the same lines (timing, words, voices) keep
+  the scroll, the clock and the place, and only what hangs on the lines changes. Upstream needs the
+  consumer to pass a `songKey` for that.
+- **Not yet carried over:** image highlights (`blyrics-image-highlights`), the debug canvas. CSS a theme writes beyond `--blyrics-*` properties
   (selectors, `::before` labels, blurs on inactive lines) has no equivalent; only the properties
   listed in `BraccatoTheme.withCustomProperties` are read.
 

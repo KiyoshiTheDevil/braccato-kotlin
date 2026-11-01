@@ -140,6 +140,16 @@ private fun BraccatoTheme.staggerOffset(stagger: ScrollStagger, index: Int, nowM
     return (stagger.deltaPx * (1 - lyricScrollEasing.transform(p))).toFloat()
 }
 
+/**
+ * What makes lyrics the same song to the view: each line's timing, words, voice and kind, and what is
+ * shown around them. Lyrics built again with nothing but other translations or romanizations on their
+ * lines answer the same, so the view keeps its scroll, its clock and its place and only the decorations
+ * change, the way upstream's `songKey` swaps lyrics into the view on screen instead of rebuilding it.
+ */
+internal fun BuiltLyrics.songIdentity(): List<Any?> =
+    listOf(syncType, allZero, noLyrics, credits, isStageDuet) +
+        lines.map { listOf(it.time, it.duration, it.isInstrumental, it.agent, it.lyric.words, it.words.map { w -> w.time to w.duration }) }
+
 /** How long before its start a line reads the clock: a letter's wave can begin before its word. */
 private const val LIVE_LEAD_S = 1.0
 
@@ -166,7 +176,9 @@ fun BraccatoLyrics(
     wallClockMs: (() -> Double)? = null,
 ) {
     val lines = lyrics.lines
-    val timeline = remember(lyrics, theme.timingOffsets) { LyricsTimeline(lyrics, LyricsLayout.SCROLL, theme.timingOffsets) }
+    // The song on screen, so lyrics built again with the same lines keep the view as it is.
+    val song = remember(lyrics) { lyrics.songIdentity() }
+    val timeline = remember(song, theme.timingOffsets) { LyricsTimeline(lyrics, LyricsLayout.SCROLL, theme.timingOffsets) }
     state.timeline = timeline
 
     val monotonic = remember { TimeSource.Monotonic.markNow() }
@@ -175,19 +187,19 @@ fun BraccatoLyrics(
     val currentOptions by rememberUpdatedState(tickOptions)
     val currentTheme by rememberUpdatedState(theme)
 
-    val clock = remember(lyrics) { LyricClock() }
-    val effectiveEnds = remember(lyrics) { lines.indices.map { effectiveEndTime(lines, it) } }
-    val live = remember(lyrics) { mutableStateListOf<Boolean>().apply { repeat(lines.size) { add(false) } } }
-    val positions = remember(lyrics) { DoubleArray(lines.size) }
-    val heights = remember(lyrics) { DoubleArray(lines.size) }
-    val credits = remember(lyrics) { doubleArrayOf(0.0, 0.0) }
-    val staggers = remember(lyrics) { mutableStateListOf<ScrollStagger>() }
-    val layoutSignature = remember(lyrics) { IntArray(1) }
-    val slides = remember(lyrics) { mutableStateListOf<DecorationSlide>() }
+    val clock = remember(song) { LyricClock() }
+    val effectiveEnds = remember(song) { lines.indices.map { effectiveEndTime(lines, it) } }
+    val live = remember(song) { mutableStateListOf<Boolean>().apply { repeat(lines.size) { add(false) } } }
+    val positions = remember(song) { DoubleArray(lines.size) }
+    val heights = remember(song) { DoubleArray(lines.size) }
+    val credits = remember(song) { doubleArrayOf(0.0, 0.0) }
+    val staggers = remember(song) { mutableStateListOf<ScrollStagger>() }
+    val layoutSignature = remember(song) { IntArray(1) }
+    val slides = remember(song) { mutableStateListOf<DecorationSlide>() }
     // How many more frames a decoration that just came or went may take to move the lines.
-    val decorationShiftFrames = remember(lyrics) { IntArray(1) }
+    val decorationShiftFrames = remember(song) { IntArray(1) }
     // The line the view last followed, which a decoration's shift is anchored on; -1 before any.
-    val scrollAnchor = remember(lyrics) { intArrayOf(-1) }
+    val scrollAnchor = remember(song) { intArrayOf(-1) }
 
     /**
      * A line was placed: if a decoration just moved it, it slides from where it was. Read during
@@ -199,9 +211,9 @@ fun BraccatoLyrics(
             ?: DecorationSlide(DoubleArray(lines.size + 1)).also { slides += it }
         slide.shifts[index] = was - y
     }
-    var creditsFocused by remember(lyrics) { mutableStateOf(false) }
-    var paddingTop by remember(lyrics) { mutableDoubleStateOf(0.0) }
-    var paddingBottom by remember(lyrics) { mutableDoubleStateOf(0.0) }
+    var creditsFocused by remember(song) { mutableStateOf(false) }
+    var paddingTop by remember(song) { mutableDoubleStateOf(0.0) }
+    var paddingBottom by remember(song) { mutableDoubleStateOf(0.0) }
     var viewportHeight by remember { mutableDoubleStateOf(0.0) }
     val scrollState = rememberScrollState()
 
