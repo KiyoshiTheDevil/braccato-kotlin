@@ -15,12 +15,27 @@ version this is, maps each file, and lists every difference made on purpose.
 | `braccato-types` | `@braccato/types` 1.0.0 | ported |
 | `braccato-parsers` | `@braccato/parsers` 0.4.0 | ported: TTML, LRC, SRT, QRC, Plain |
 | `braccato-core` | `@braccato/core` 1.17.1 | ported: the engine's logic, without the DOM |
-| `braccato-compose` | `@braccato/core` renderer and styles | Compose renderer: scroll and stage layouts (desktop for now) |
+| `braccato-compose` | `@braccato/core` renderer and styles | Compose renderer: scroll and stage layouts |
 
-The modules are Kotlin Multiplatform with a JVM target (Java 17 bytecode). `braccato-types`,
-`braccato-parsers` and `braccato-core` carry no UI and work on desktop and Android as they are.
-`braccato-compose` is written in `commonMain` against Compose Multiplatform 1.12; it builds for the
-desktop JVM today, and an Android target is a build change rather than a code change.
+Every module is Kotlin Multiplatform with two targets: the desktop JVM (Java 17 bytecode) and
+Android (compileSdk 37, which Compose 1.12 requires, and minSdk 26), built with AGP's
+`com.android.kotlin.multiplatform.library` plugin. All code is in `commonMain` but the grapheme
+splitting, which uses `java.text.BreakIterator` on desktop and ICU's on Android.
+
+Each module passes on what its API is made of: `braccato-compose` brings `braccato-core` (for
+`buildLyrics` and `SetLyricsOptions`) and Compose's runtime and UI; `braccato-core` brings
+`braccato-types`. A consumer needs `braccato-compose`, and `braccato-parsers` to read files.
+
+To use the working copy from another Gradle build, include it there; Gradle then builds it along:
+
+```kotlin
+// settings.gradle.kts
+includeBuild("../braccato-kotlin")
+
+// build.gradle.kts, in commonMain
+implementation("braccato:braccato-compose")
+implementation("braccato:braccato-parsers")
+```
 
 `braccato-core` is everything upstream's renderer decides from numbers alone: how lines are split
 into words and grouped, which lines are active at a time, when and where the view scrolls, how a seek
@@ -77,7 +92,8 @@ extra options the format parsers take.
 
 ## Building
 
-Requires JDK 21 (the build targets Java 17 bytecode).
+Requires JDK 21 (the build targets Java 17 bytecode) and the Android SDK with platform 37, found
+through `sdk.dir` in `local.properties` or `ANDROID_HOME`.
 
 ```bash
 ./gradlew allTests
