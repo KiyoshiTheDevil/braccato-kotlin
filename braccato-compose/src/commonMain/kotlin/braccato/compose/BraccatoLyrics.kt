@@ -24,12 +24,14 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -106,6 +108,25 @@ private class ScrollStagger(
     val scale: Double,
 )
 
+/**
+ * The lines a decoration moved, sliding from where they were to where it put them:
+ * `captureDecorationSlide` upstream. One entry per line, then the credits.
+ */
+private class DecorationSlide(val startMs: Double, val shifts: DoubleArray)
+
+private fun BraccatoTheme.slideOffset(slide: DecorationSlide, index: Int, nowMs: Double): Float {
+    val shift = slide.shifts.getOrElse(index) { 0.0 }
+    if (shift == 0.0) return 0f
+    val p = progress(nowMs - slide.startMs, decorationEntryMs)
+    return (shift * (1 - decorationEntryEasing.transform(p))).toFloat()
+}
+
+/** Below half a pixel, upstream does not slide a line. */
+private const val DECORATION_MIN_SHIFT_PX = 0.5
+
+/** How many frames a decoration change waits for the layout it causes. */
+private const val DECORATION_SHIFT_FRAMES = 3
+
 private fun BraccatoTheme.staggerOffset(stagger: ScrollStagger, index: Int, nowMs: Double): Float {
     val relative = index - stagger.activeIndex
     val activeMs = lineScrollDurationMs(0, stagger.deltaPx)
@@ -158,6 +179,22 @@ fun BraccatoLyrics(
     val credits = remember(lyrics) { doubleArrayOf(0.0, 0.0) }
     val staggers = remember(lyrics) { mutableStateListOf<ScrollStagger>() }
     val layoutSignature = remember(lyrics) { IntArray(1) }
+    val slides = remember(lyrics) { mutableStateListOf<DecorationSlide>() }
+    // How many more frames a decoration that just came or went may take to move the lines.
+    val decorationShiftFrames = remember(lyrics) { IntArray(1) }
+
+    /**
+     * A line was placed: if a decoration just moved it, it slides from where it was. Read during
+     * layout rather than on the next frame, so the line is never drawn even once at its new place.
+     */
+    fun notePlaced(index: Int, y: Double, was: Double) {
+        if (decorationShiftFrames[0] <= 0 || was == 0.0 && index > 0 || abs(was - y) < DECORATION_MIN_SHIFT_PX) return
+        if (!currentTheme.animations.decorationEntry) return
+        val wall = clock.wallMs
+        val slide = slides.lastOrNull()?.takeIf { it.startMs == wall }
+            ?: DecorationSlide(wall, DoubleArray(lines.size + 1)).also { slides += it }
+        slide.shifts[index] = was - y
+    }
     var creditsFocused by remember(lyrics) { mutableStateOf(false) }
     var paddingTop by remember(lyrics) { mutableDoubleStateOf(0.0) }
     var paddingBottom by remember(lyrics) { mutableDoubleStateOf(0.0) }
@@ -202,6 +239,9 @@ fun BraccatoLyrics(
                 } else {
                     null
                 }
+
+                if (decorationShiftFrames[0] > 0) decorationShiftFrames[0]--
+                slides.removeAll { wall - it.startMs > theme.decorationEntryMs + 50 }
 
                 if (viewport != null) {
                     // A layout that moved since the last frame has to be scrolled to again, as upstream's
@@ -297,17 +337,25 @@ fun BraccatoLyrics(
                     theme = theme,
                     live = live[index],
                     time = { clock.lyricTime },
-                    decorations = remember(line) { decorations(line) },
+                    // Asked again when the host hands over another function or a state the function reads
+                    // changes, and passed on only when what it answers is different.
+                    decorations = remember(line, decorations) {
+                        derivedStateOf(structuralEqualityPolicy()) { decorations(line) }
+                    }.value,
+                    onDecorationShift = { decorationShiftFrames[0] = DECORATION_SHIFT_FRAMES },
                     onClick = clickTime,
                     modifier = Modifier
                         .onPlaced { coordinates ->
-                            positions[index] = coordinates.positionInParent().y.toDouble()
+                            val y = coordinates.positionInParent().y.toDouble()
+                            notePlaced(index, y, positions[index])
+                            positions[index] = y
                             heights[index] = coordinates.size.height.toDouble()
                         }
                         .graphicsLayer {
-                            if (staggers.isEmpty()) return@graphicsLayer
+                            if (staggers.isEmpty() && slides.isEmpty()) return@graphicsLayer
                             val wall = clock.wallMs
-                            translationY = staggers.sumOf { theme.staggerOffset(it, index, wall).toDouble() }.toFloat()
+                            translationY = staggers.sumOf { theme.staggerOffset(it, index, wall).toDouble() }.toFloat() +
+                                slides.sumOf { theme.slideOffset(it, index, wall).toDouble() }.toFloat()
                         },
                 )
             }
@@ -318,13 +366,16 @@ fun BraccatoLyrics(
                     focused = creditsFocused || lyrics.syncType == braccato.types.LyricSyncType.NONE,
                     modifier = Modifier
                         .onPlaced { coordinates ->
-                            credits[0] = coordinates.positionInParent().y.toDouble()
+                            val y = coordinates.positionInParent().y.toDouble()
+                            notePlaced(lines.size, y, credits[0])
+                            credits[0] = y
                             credits[1] = coordinates.size.height.toDouble()
                         }
                         .graphicsLayer {
-                            if (staggers.isEmpty()) return@graphicsLayer
+                            if (staggers.isEmpty() && slides.isEmpty()) return@graphicsLayer
                             val wall = clock.wallMs
-                            translationY = staggers.sumOf { theme.staggerOffset(it, lines.size, wall).toDouble() }.toFloat()
+                            translationY = staggers.sumOf { theme.staggerOffset(it, lines.size, wall).toDouble() }.toFloat() +
+                                slides.sumOf { theme.slideOffset(it, lines.size, wall).toDouble() }.toFloat()
                         },
                 )
             }

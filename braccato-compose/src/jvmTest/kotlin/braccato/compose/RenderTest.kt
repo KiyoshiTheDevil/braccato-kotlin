@@ -61,6 +61,45 @@ class RenderTest {
         assertTrue(File("build/snapshots/sample-10.3.png").length() > 0)
     }
 
+    @OptIn(ExperimentalComposeUiApi::class)
+    @Test fun `streams a translation in and takes it out again`() {
+        val plain = buildLyrics(parseTTMLContent(SAMPLE_TTML.replace(Regex("<translations>.*?</translations>"), "")).lyrics)
+        val streamed = androidx.compose.runtime.mutableStateMapOf<Int, String>()
+        var wall = 0.0
+        val scene = ImageComposeScene(900, 700, Density(1f)) {
+            BraccatoLyrics(
+                plain,
+                { PlaybackSnapshot(10.3, true) },
+                Modifier.fillMaxSize().background(Color(0xFF15121C)),
+                decorations = { line ->
+                    val text = streamed[line.index]
+                    LineDecorations(translation = text?.let { braccato.core.buildTranslation(line.content!!.main.text, it, "de") })
+                },
+                wallClockMs = { wall },
+            )
+        }
+        val out = File("build/snapshots").apply { mkdirs() }
+        fun frame(n: Int) = scene.render(n * 16_666_667L).also { wall = n * 1000 / 60.0 }
+        fun save(n: Int, name: String) = File(out, "$name.png").writeBytes(frame(n).encodeToData(EncodedImageFormat.PNG)!!.bytes)
+
+        for (n in 0..60) frame(n)
+        save(61, "decoration-0-before")
+        streamed[1] = "Wir steigen höher, als wir je waren"
+        save(62, "decoration-1-arriving")
+        save(63, "decoration-1b-arriving")
+        save(64, "decoration-1c-arriving")
+        for (n in 65..67) frame(n)
+        save(68, "decoration-2-midway")
+        for (n in 69..140) frame(n)
+        save(141, "decoration-3-settled")
+        streamed.remove(1)
+        for (n in 142..147) frame(n)
+        save(148, "decoration-4-leaving")
+        for (n in 149..240) frame(n)
+        save(241, "decoration-5-gone")
+        scene.close()
+    }
+
     @Test fun `renders the stage layout`() {
         for (t in listOf(7.3, 12.9, 30.0)) render(sample, t, "stage-$t", height = 400, stage = true)
     }

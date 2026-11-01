@@ -3,6 +3,14 @@
 // translation; or, for an instrumental line, the note.
 package braccato.compose
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -43,9 +51,9 @@ import braccato.core.TextDirection
 import braccato.core.buildRomanization
 import braccato.core.buildTranslation
 
-/** What hangs under a line. `injectTranslation` and `injectRomanization` upstream. */
+/** What hangs under a line. `injectTranslation` and `injectRomanization` upstream. Equal when it shows the same. */
 @Immutable
-class LineDecorations(
+data class LineDecorations(
     val translation: BuiltTranslation? = null,
     val romanization: BuiltRomanization? = null,
 ) {
@@ -250,6 +258,64 @@ private fun ContentFlow(
 }
 
 /**
+ * A translation or romanization coming and going. In, it fades and drops into place as upstream's
+ * `blyrics-decoration-in` does (350 ms, from 0.4em above). Out, when the host takes it away, it fades
+ * and lifts back the same distance over the same time before it leaves the layout; upstream drops it
+ * at once. A new value in its place
+ * comes in afresh, as a decoration upstream injects again does. [onShift] is told whenever what is
+ * laid out changes, so the view can slide the lines it moved.
+ */
+@Composable
+private fun <T : Any> AnimatedDecoration(
+    value: T?,
+    theme: BraccatoTheme,
+    emPx: Float,
+    onShift: () -> Unit,
+    content: @Composable (T) -> Unit,
+) {
+    var shown by remember { mutableStateOf(value) }
+    var leaving by remember { mutableStateOf(false) }
+    val animate = theme.animations.decorationEntry
+    // 0 to 1 over the entry, or over the exit while leaving.
+    val progress = remember { Animatable(if (value != null && !animate) 1f else 0f) }
+    val durationMs = theme.decorationEntryMs.toInt()
+    LaunchedEffect(value, animate) {
+        if (value != null) {
+            if (value != shown || leaving) {
+                shown = value
+                leaving = false
+                progress.snapTo(0f)
+            }
+            if (animate) progress.animateTo(1f, tween(durationMs, easing = LinearEasing)) else progress.snapTo(1f)
+        } else if (shown != null) {
+            leaving = true
+            progress.snapTo(0f)
+            if (animate) progress.animateTo(1f, tween(durationMs, easing = LinearEasing))
+            shown = null
+            leaving = false
+        }
+    }
+    val laidOut = shown
+    val previous = remember { arrayOf<Any?>(laidOut) }
+    SideEffect {
+        if (previous[0] != laidOut) {
+            previous[0] = laidOut
+            onShift()
+        }
+    }
+    if (laidOut == null) return
+    Box(
+        Modifier.graphicsLayer {
+            // Leaving runs the entry's curve forwards from shown to gone, so it starts at once.
+            val eased = theme.decorationEntryEasing.transform(progress.value)
+            val present = if (leaving) 1 - eased else eased
+            alpha = present
+            translationY = -0.4f * emPx * (1 - present)
+        },
+    ) { content(laidOut) }
+}
+
+/**
  * @param effectiveEnd When the line stops being sung: the next line's start, or its own end.
  * @param live Whether the line reads the clock; a line well before or after its time draws at rest.
  * @param time The lyric time, in seconds. Read while drawing, never while composing.
@@ -266,6 +332,7 @@ internal fun LyricLine(
     modifier: Modifier = Modifier,
     side: LineSide = lineSide(line),
     verticalPadding: Dp = theme.linePadding,
+    onDecorationShift: () -> Unit = {},
 ) {
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
@@ -318,17 +385,17 @@ internal fun LyricLine(
                 ContentFlow(background, backgroundStyle, measurer, backgroundContext, alignment, Modifier.padding(top = theme.fontSize * 0.1f))
             }
 
-            decorations.romanization?.let { romanization ->
-                val style = remember(theme, density) {
-                    with(density) {
-                        TextStyle(
-                            fontFamily = theme.translatedFontFamily ?: theme.fontFamily,
-                            fontSize = (theme.translatedFontSize / 1.25f).toSp(),
-                            fontWeight = theme.translatedFontWeight,
-                            color = theme.translatedColor,
-                        )
-                    }
+            val romanizedStyle = remember(theme, density) {
+                with(density) {
+                    TextStyle(
+                        fontFamily = theme.translatedFontFamily ?: theme.fontFamily,
+                        fontSize = (theme.translatedFontSize / 1.25f).toSp(),
+                        fontWeight = theme.translatedFontWeight,
+                        color = theme.translatedColor,
+                    )
                 }
+            }
+            AnimatedDecoration(decorations.romanization, theme, with(density) { (theme.translatedFontSize / 1.25f).toPx() }, onDecorationShift) { romanization ->
                 val romanizedDirection = if (romanization.direction == TextDirection.RTL) LayoutDirection.Rtl else LayoutDirection.Ltr
                 CompositionLocalProvider(LocalLayoutDirection provides romanizedDirection) {
                     Box(
@@ -341,28 +408,28 @@ internal fun LyricLine(
                         val timed = romanization.content
                         if (timed != null) {
                             val timedContext = WordContext(theme, effectiveEnd, live, time, emPx / 1.25f, glowRadiusPx / 1.25f, theme.inactiveColor)
-                            ContentFlow(timed.main, style.copy(color = Color.Unspecified), measurer, timedContext, Alignment.Start)
+                            ContentFlow(timed.main, romanizedStyle.copy(color = Color.Unspecified), measurer, timedContext, Alignment.Start)
                         } else {
-                            MotionText(romanization.text, style, live)
+                            MotionText(romanization.text, romanizedStyle, live)
                         }
                     }
                 }
             }
 
-            decorations.translation?.let { translation ->
-                val style = remember(theme, density) {
-                    with(density) {
-                        TextStyle(
-                            fontFamily = theme.translatedFontFamily ?: theme.fontFamily,
-                            fontSize = theme.translatedFontSize.toSp(),
-                            fontWeight = theme.translatedFontWeight,
-                            color = theme.translatedColor,
-                        )
-                    }
+            val translatedStyle = remember(theme, density) {
+                with(density) {
+                    TextStyle(
+                        fontFamily = theme.translatedFontFamily ?: theme.fontFamily,
+                        fontSize = theme.translatedFontSize.toSp(),
+                        fontWeight = theme.translatedFontWeight,
+                        color = theme.translatedColor,
+                    )
                 }
+            }
+            AnimatedDecoration(decorations.translation, theme, with(density) { theme.translatedFontSize.toPx() }, onDecorationShift) { translation ->
                 val translatedDirection = if (translation.direction == TextDirection.RTL) LayoutDirection.Rtl else LayoutDirection.Ltr
                 CompositionLocalProvider(LocalLayoutDirection provides translatedDirection) {
-                    MotionText(translation.text, style, live, Modifier.padding(top = 8.dp))
+                    MotionText(translation.text, translatedStyle, live, Modifier.padding(top = 8.dp))
                 }
             }
         }

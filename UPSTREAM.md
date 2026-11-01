@@ -111,14 +111,21 @@ Differences in the renderer:
   wide for even an empty line breaks the same way, where upstream lets it run out of the view. In
   practice that is CJK, written without spaces, on a phone.
 - **The glow is the lit highlight blurred on its own layer**, matching CSS `drop-shadow` (which
-  follows painted pixels) rather than a text shadow (which would follow whole glyphs).
+  follows painted pixels) rather than a text shadow (which would follow whole glyphs). Its radius is
+  converted so the blur is CSS's: a shadow's blur radius is twice the Gaussian's standard deviation in
+  CSS, while Compose's `BlurEffect` reads its radius as `0.57735 * r + 0.5`. Passed through as it
+  was, the 0.8rem glow spread a fifth wider and looked softer than upstream's (`GlowTest`).
 - **A lettered word sweeps with the word-level gradient** laid across its letters. For the default
   linear swipe this is the same picture as upstream's per-letter masks; under a non-linear swipe
   easing the letters reveal on the whole word's curve rather than each on its own.
 - **Lines are laid out in one scrolling column**, not culled off screen. Fine at song length; a lazy
   list is the change to make if that ever matters.
-- **Not yet carried over:** image highlights (`blyrics-image-highlights`), the decoration entry
-  animation, the debug canvas, `swapLyrics`. CSS a theme writes beyond `--blyrics-*` properties
+- **Decorations come and go as upstream's do, and leave gently too.** A translation or romanization
+  that arrives fades and drops in (`blyrics-decoration-in`, 350 ms) and the lines it moved slide from
+  where they were (`captureDecorationSlide`), then the view scrolls to the active line again. Upstream
+  takes one away at once; here it fades and lifts out over the same time before the lines close up.
+- **Not yet carried over:** image highlights (`blyrics-image-highlights`), the debug canvas,
+  `swapLyrics`. CSS a theme writes beyond `--blyrics-*` properties
   (selectors, `::before` labels, blurs on inactive lines) has no equivalent; only the properties
   listed in `BraccatoTheme.withCustomProperties` are read.
 

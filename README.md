@@ -89,6 +89,25 @@ a reading the player keeps repeating forward on the wall clock (at most 250 ms, 
 the swipe still moves every frame. A host that knows when its reading was taken can pass
 `sampledAtMs` instead, and the view extrapolates from that.
 
+Translations and romanizations can arrive after the song is built. `decorations` is asked again for a
+line whenever the host passes another function or a state the function reads changes, and a
+decoration that comes or goes fades in or out under its line while the lines below slide to make room,
+as upstream's do:
+
+```kotlin
+val romaji = remember { mutableStateMapOf<Int, String>() }   // filled in as it is generated
+
+BraccatoLyrics(
+    lyrics = built,
+    playback = { ... },
+    decorations = { line ->
+        lyricDecorations(line).copy(
+            romanization = romaji[line.index]?.let { buildRomanization(line.content!!.main.text, line.language, it) },
+        )
+    },
+)
+```
+
 `BraccatoStage` is the subtitle layout. `rememberBraccatoLyricsState()` reports when the user has
 scrolled the view away (`resumeAffordanceVisible`) and brings autoscroll back (`resumeAutoscroll()`).
 

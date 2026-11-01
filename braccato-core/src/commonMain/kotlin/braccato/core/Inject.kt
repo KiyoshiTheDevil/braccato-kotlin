@@ -341,21 +341,27 @@ fun buildLineSyncedParts(item: Lyric): List<LyricPart> {
 
 // -- Decorations --------------------------------------------
 
-/** A translation hung under a line: `injectTranslation`. */
-class BuiltTranslation(
+/** A translation hung under a line: `injectTranslation`. Equal when it shows the same. */
+data class BuiltTranslation(
     val text: String,
     val language: String,
     val direction: TextDirection,
 )
 
-/** A romanization hung under a line: `injectRomanization`. Timed, it carries words that sweep like the line's. */
-class BuiltRomanization(
+/**
+ * A romanization hung under a line: `injectRomanization`. Timed, it carries words that sweep like the
+ * line's. Equal when it shows the same, which is what upstream's `decorationSources` compares.
+ */
+data class BuiltRomanization(
     val text: String,
     val language: String,
     val direction: TextDirection,
-    /** Null when the romanization is untimed and shows as plain text. */
-    val content: LineContent?,
-)
+    /** The timed parts it was built from, or null when it is untimed and shows as plain text. */
+    val timedParts: List<LyricPart>?,
+) {
+    /** The timed parts as words, built once. Null when untimed. */
+    val content: LineContent? by lazy { timedParts?.let { createLyricsLine(it, splitBackgroundLine = false) } }
+}
 
 /**
  * The translation for a line, or null when it only repeats the line, which upstream leaves off.
@@ -383,7 +389,7 @@ fun buildRomanization(
         text = text,
         language = romanizationLanguage(lineLanguage),
         direction = detectDirection(text),
-        content = if (timed) createLyricsLine(timedRomanization, splitBackgroundLine = false) else null,
+        timedParts = if (timed) timedRomanization.toList() else null,
     )
 }
 

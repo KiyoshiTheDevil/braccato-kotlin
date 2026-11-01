@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -19,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -167,7 +169,9 @@ fun BraccatoStage(
                             theme = theme,
                             live = role != StageRole.QUEUED,
                             time = { clock.lyricTime },
-                            decorations = remember(line) { decorations(line) },
+                            decorations = remember(line, decorations) {
+                                derivedStateOf(structuralEqualityPolicy()) { decorations(line) }
+                            }.value,
                             onClick = null,
                             side = stageSide(line, isDuet),
                             verticalPadding = theme.fontSize * 0.1f,
