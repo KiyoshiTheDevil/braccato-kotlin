@@ -162,6 +162,8 @@ private const val LIVE_LEAD_S = 1.0
  * @param decorations What hangs under each line. Defaults to what the line's own lyric carries.
  * @param onSeek Called with a player time, in seconds, when a line is clicked. Null leaves lines inert.
  * @param wallClockMs The clock [PlaybackSnapshot.sampledAtMs] is on.
+ * @param footer Shown at the very end of the scrolling text, after the credits, like the extension's
+ *   `.blyrics-footer`: the place for where the lyrics came from.
  */
 @Composable
 fun BraccatoLyrics(
@@ -174,8 +176,10 @@ fun BraccatoLyrics(
     decorations: (BuiltLine) -> LineDecorations = ::lyricDecorations,
     onSeek: ((Double) -> Unit)? = null,
     wallClockMs: (() -> Double)? = null,
+    footer: (@Composable () -> Unit)? = null,
 ) {
     val lines = lyrics.lines
+    val footerHeight = remember { doubleArrayOf(0.0) }
     // The song on screen, so lyrics built again with the same lines keep the view as it is.
     val song = remember(lyrics) { lyrics.songIdentity() }
     val timeline = remember(song, theme.timingOffsets) { LyricsTimeline(lyrics, LyricsLayout.SCROLL, theme.timingOffsets) }
@@ -330,7 +334,7 @@ fun BraccatoLyrics(
                             firstLineHeight = heights[0],
                             lastLineCentre = if (hasCredits) credits[0] + credits[1] / 2 else positions[last] + heights[last] / 2,
                             lastLineHeight = if (hasCredits) credits[1] else heights[last],
-                            footerHeight = 0.0,
+                            footerHeight = footerHeight[0],
                         ),
                     )
                     if (abs(top - paddingTop) > 1) paddingTop = top
@@ -411,6 +415,9 @@ fun BraccatoLyrics(
                                 slides.sumOf { theme.slideOffset(it, lines.size, wall).toDouble() }.toFloat()
                         },
                 )
+            }
+            footer?.let { content ->
+                androidx.compose.foundation.layout.Box(Modifier.onPlaced { footerHeight[0] = it.size.height.toDouble() }) { content() }
             }
             Spacer(Modifier.height(with(density) { paddingBottom.toFloat().toDp() }))
         }
