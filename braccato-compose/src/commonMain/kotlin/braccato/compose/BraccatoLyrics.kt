@@ -426,7 +426,17 @@ fun BraccatoLyrics(
                 )
             }
             footer?.let { content ->
-                androidx.compose.foundation.layout.Box(Modifier.onPlaced { footerHeight[0] = it.size.height.toDouble() }) { content() }
+                androidx.compose.foundation.layout.Box(
+                    Modifier
+                        .onPlaced { footerHeight[0] = it.size.height.toDouble() }
+                        // One step behind what comes before it, so that it moves with the text rather than ahead of it.
+                        .graphicsLayer {
+                            if (staggers.isEmpty() && slides.isEmpty()) return@graphicsLayer
+                            val wall = clock.wallMs
+                            translationY = staggers.sumOf { theme.staggerOffset(it, lines.size + 1, wall).toDouble() }.toFloat() +
+                                slides.sumOf { theme.slideOffset(it, lines.size, wall).toDouble() }.toFloat()
+                        },
+                ) { content() }
             }
             Spacer(Modifier.height(with(density) { paddingBottom.toFloat().toDp() }))
         }
