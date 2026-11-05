@@ -30,6 +30,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.runtime.withFrameNanos
@@ -177,8 +180,9 @@ fun BraccatoLyrics(
     onSeek: ((Double) -> Unit)? = null,
     wallClockMs: (() -> Double)? = null,
     footer: (@Composable () -> Unit)? = null,
-    // False while out of sight: everything stays built and measured, but no frame is asked for.
-    active: Boolean = true,
+    // False while out of sight: everything stays built and measured, but only a frame a second is asked for. Read
+    // as a function so that a change rebuilds nothing, which for a whole song's words takes a while.
+    active: () -> Boolean = { true },
 ) {
     val lines = lyrics.lines
     val footerHeight = remember { doubleArrayOf(0.0) }
@@ -236,8 +240,11 @@ fun BraccatoLyrics(
         }
     }
 
-    LaunchedEffect(timeline, active) {
-        while (active) {
+    val currentActive by rememberUpdatedState(active)
+    LaunchedEffect(timeline) {
+        while (true) {
+            // Out of sight once a second, so that nothing has to be caught up with when it comes back.
+            if (!currentActive()) withTimeoutOrNull(1000) { snapshotFlow { currentActive() }.first { it } }
             withFrameNanos {
                 val theme = currentTheme
                 val snapshot = currentPlayback()
