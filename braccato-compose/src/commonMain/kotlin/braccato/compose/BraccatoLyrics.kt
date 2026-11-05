@@ -177,6 +177,8 @@ fun BraccatoLyrics(
     onSeek: ((Double) -> Unit)? = null,
     wallClockMs: (() -> Double)? = null,
     footer: (@Composable () -> Unit)? = null,
+    // False while out of sight: everything stays built and measured, but no frame is asked for.
+    active: Boolean = true,
 ) {
     val lines = lyrics.lines
     val footerHeight = remember { doubleArrayOf(0.0) }
@@ -234,8 +236,8 @@ fun BraccatoLyrics(
         }
     }
 
-    LaunchedEffect(timeline) {
-        while (true) {
+    LaunchedEffect(timeline, active) {
+        while (active) {
             withFrameNanos {
                 val theme = currentTheme
                 val snapshot = currentPlayback()
