@@ -55,7 +55,10 @@ internal fun canBreakBetween(before: String, after: String): Boolean {
  * on its own gets its time shared out by length, so the sweep runs on across the pieces as it did.
  */
 internal fun splitForBreaking(w: BuiltWord): List<BuiltWord> {
-    if (w.letters != null || w.text.length < 2 || !BREAKABLE_SCRIPT.containsMatchIn(w.text)) return listOf(w)
+    if (w.text.length < 2) return listOf(w)
+    if (!BREAKABLE_SCRIPT.containsMatchIn(w.text)) return splitLong(w)
+    // A syllable or two of CJK fits any line, and its letter wave is planned for it whole.
+    if (w.text.length <= 4) return listOf(w)
     val pieces = mutableListOf(StringBuilder())
     var i = 0
     while (i < w.text.length) {
@@ -65,11 +68,39 @@ internal fun splitForBreaking(w: BuiltWord): List<BuiltWord> {
         if (last.isNotEmpty() && canBreakBetween(last.toString(), cp)) pieces += StringBuilder(cp) else last.append(cp)
         i += n
     }
-    if (pieces.size == 1) return listOf(w)
+    return share(w, pieces.map { it.toString() })
+}
+
+/**
+ * A long word in a script with spaces, without one in it ("jaba-daba-…-you", The Butcher Sisters on
+ * LRCLIB): after each hyphen, and what is still longer than the wrap threshold in its chunks, which
+ * core works out for such words ([BuiltWord.wrapChunks]) and nothing here used. The layout then
+ * breaks between the pieces where the line is full; whole, the word ran out over the edge.
+ */
+private fun splitLong(w: BuiltWord): List<BuiltWord> {
+    // Lettered words (the letter wave, on by default) have no chunks of their own: the same threshold.
+    val chunk = w.wrapChunks?.firstOrNull()?.length
+        ?: braccato.core.CoreSettings.longWordWrapThreshold.getNumberValue().toInt().coerceAtLeast(1).takeIf { w.text.length > it }
+        ?: return listOf(w)
+    val byHyphen = Regex("(?<=-)").split(w.text).filter { it.isNotEmpty() }
+    return share(w, byHyphen.flatMap { if (it.length > chunk) it.chunked(chunk) else listOf(it) })
+}
+
+/** [w] as the given pieces of its text, each with its share of the time. */
+private fun share(w: BuiltWord, texts: List<String>): List<BuiltWord> {
+    if (texts.size <= 1) return listOf(w)
     val total = w.text.length.toDouble()
     var at = 0
-    return pieces.mapIndexed { k, piece ->
-        val text = piece.toString()
+    // A lettered word's letters go with its pieces, each piece taking letters until it is spelt out.
+    var letter = 0
+    fun lettersOf(text: String): List<String>? {
+        val all = w.letters ?: return null
+        val mine = mutableListOf<String>()
+        var spelt = 0
+        while (spelt < text.length && letter < all.size) { mine += all[letter]; spelt += all[letter].length; letter++ }
+        return mine
+    }
+    return texts.mapIndexed { k, text ->
         val start = at
         at += text.length
         BuiltWord(
@@ -77,11 +108,11 @@ internal fun splitForBreaking(w: BuiltWord): List<BuiltWord> {
             time = if (w.isLineSynced) w.time else w.time + w.duration * start / total,
             duration = if (w.isLineSynced) w.duration else w.duration * text.length / total,
             isBackground = w.isBackground, explicit = w.explicit, isLineSynced = w.isLineSynced, isRtl = w.isRtl,
-            isLongWord = w.isLongWord, letters = null, wrapChunks = null, wobbles = w.wobbles && k == 0,
+            isLongWord = w.isLongWord, letters = lettersOf(text), wrapChunks = null, wobbles = w.wobbles && k == 0,
         )
     }
 }
 
 internal fun LineItem.Group.splitForBreaking(): LineItem.Group =
-    if (words.none { it.letters == null && BREAKABLE_SCRIPT.containsMatchIn(it.text) }) this
+    if (words.none { BREAKABLE_SCRIPT.containsMatchIn(it.text) || it.wrapChunks != null || it.letters != null }) this
     else LineItem.Group(text, isBackground, isLong, words.flatMap(::splitForBreaking))
