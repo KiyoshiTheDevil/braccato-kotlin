@@ -398,13 +398,13 @@ internal fun LyricLine(
                 with(density) {
                     TextStyle(
                         fontFamily = theme.translatedFontFamily ?: theme.fontFamily,
-                        fontSize = (theme.translatedFontSize / 1.25f).toSp(),
+                        fontSize = theme.romanizedSize.toSp(),
                         fontWeight = theme.translatedFontWeight,
                         color = theme.translatedColor,
                     )
                 }
             }
-            AnimatedDecoration(decorations.romanization, theme, with(density) { (theme.translatedFontSize / 1.25f).toPx() }, onDecorationShift) { romanization ->
+            AnimatedDecoration(decorations.romanization, theme, with(density) { theme.romanizedSize.toPx() }, onDecorationShift) { romanization ->
                 val romanizedDirection = if (romanization.direction == TextDirection.RTL) LayoutDirection.Rtl else LayoutDirection.Ltr
                 CompositionLocalProvider(LocalLayoutDirection provides romanizedDirection) {
                     Box(

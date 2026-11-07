@@ -55,6 +55,8 @@ data class BraccatoTheme(
     val translatedFontFamily: FontFamily? = null,
     val translatedFontSize: Dp = 32.dp,
     val translatedFontWeight: FontWeight = FontWeight.SemiBold,
+    /** The romanization's own size. Null: as upstream, the translation's over 1.25. Not upstream. */
+    val romanizedFontSize: Dp? = null,
 
     // -- Credits --
     val creditsLabel: String = "Written by",
@@ -260,3 +262,6 @@ data class BraccatoTheme(
         return t
     }
 }
+
+/** How large a romanization is drawn. */
+internal val BraccatoTheme.romanizedSize: Dp get() = romanizedFontSize ?: (translatedFontSize / 1.25f)
