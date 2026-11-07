@@ -24,6 +24,9 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -62,6 +65,7 @@ import braccato.core.lyricClockShiftS
 import braccato.core.resolveTickOptions
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.time.TimeSource
 
 /** One reading of the player. */
@@ -180,6 +184,8 @@ fun BraccatoLyrics(
     onSeek: ((Double) -> Unit)? = null,
     wallClockMs: (() -> Double)? = null,
     footer: (@Composable () -> Unit)? = null,
+    /** Who sings: their names over the line being sung, when two or more have one. */
+    voices: VoiceLabels? = null,
     // False while out of sight: everything stays built and measured, but only a frame a second is asked for. Read
     // as a function so that a change rebuilds nothing, which for a whole song's words takes a while.
     active: () -> Boolean = { true },
@@ -203,6 +209,11 @@ fun BraccatoLyrics(
     val positions = remember(song) { DoubleArray(lines.size) }
     val heights = remember(song) { DoubleArray(lines.size) }
     val credits = remember(song) { doubleArrayOf(0.0, 0.0) }
+    val showVoices = voices?.useful == true
+
+    var singing by remember(song) { mutableStateOf<Singing?>(null) }
+    val textLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+    val glass = remember(textLayer) { VoiceGlass(textLayer) }
     val staggers = remember(song) { mutableStateListOf<ScrollStagger>() }
     val layoutSignature = remember(song) { IntArray(1) }
     val slides = remember(song) { mutableStateListOf<DecorationSlide>() }
@@ -306,6 +317,18 @@ fun BraccatoLyrics(
                 state.resumeAffordanceVisible = frame.resumeAffordanceVisible
 
                 val t = clock.lyricTime
+                if (showVoices && frame.status == FrameStatus.SYNCED) {
+                    // Who sings now; between lines the last ones stay.
+                    val now = lines.indices.filter { !lines[it].isInstrumental && t >= lines[it].time && t < effectiveEnds[it] }
+                    if (now.isNotEmpty()) {
+                        // A second voice only for a real overlap: lines that touch for a moment had the
+                        // capsule start to split and fold back at once, names over each other.
+                        val first = now.first()
+                        val together = now.filter { it == first || min(effectiveEnds[it], effectiveEnds[first]) - max(lines[it].time, lines[first].time) >= VOICE_OVERLAP_S }
+                        val s = Singing(together.map { lines[it].agent ?: "v1" }.distinct())
+                        if (s != singing) singing = s
+                    }
+                }
                 val tail = max(theme.highlightFadeOutMs, theme.scaleTransitionMs) / 1000 + 0.2
                 for (i in lines.indices) {
                     val isLive = frame.status == FrameStatus.SYNCED && t >= lines[i].time - LIVE_LEAD_S && t < effectiveEnds[i] + tail
@@ -364,6 +387,15 @@ fun BraccatoLyrics(
         Column(
             Modifier
                 .fillMaxWidth()
+                .then(
+                    // The text into a layer for the name capsule to blur, and left out where it lies.
+                    if (!showVoices) Modifier else Modifier.drawWithContent {
+                        glass.text.record { this@drawWithContent.drawContent() }
+                        val shape = glass.shape
+                        if (shape == null) drawLayer(glass.text)
+                        else clipPath(shape, androidx.compose.ui.graphics.ClipOp.Difference) { drawLayer(glass.text) }
+                    },
+                )
                 .nestedScroll(userScroll)
                 .verticalScroll(scrollState),
         ) {
@@ -440,6 +472,15 @@ fun BraccatoLyrics(
             }
             Spacer(Modifier.height(with(density) { paddingBottom.toFloat().toDp() }))
         }
+        if (showVoices) {
+            VoiceBlob(
+                voices = voices!!,
+                // Out of the way of the button back to the sung line, which stands where it does.
+                singing = if (state.resumeAffordanceVisible) null else singing,
+                theme = theme,
+                glass = glass,
+            )
+        }
     }
 }
 
@@ -475,3 +516,6 @@ internal fun Credits(names: String, theme: BraccatoTheme, focused: Boolean, modi
         BasicText("${theme.creditsLabel} $names", style = style)
     }
 }
+
+/** How long two lines must sing together, in seconds, for the name capsule to split. */
+private const val VOICE_OVERLAP_S = 0.7

@@ -385,6 +385,20 @@ class TTMLParserTest {
         assertEquals("Hello(echo)(echo)", lines[0].words)
     }
 
+    // -- singers' names --
+
+    @Test fun `reads the singers' names by their parsed agent ids`() {
+        val ttml = """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><head><metadata>""" +
+            """<ttm:agent xml:id="a" type="person"><ttm:name>Lea</ttm:name></ttm:agent>""" +
+            """<ttm:agent xml:id="b" type="person">
+  <ttm:name type="full">Max</ttm:name>
+</ttm:agent>""" +
+            """<ttm:agent xml:id="g" type="group"><ttm:name>Lea &amp; Max</ttm:name></ttm:agent>""" +
+            """<ttm:agent xml:id="c" type="person"/>""" +
+            """</metadata></head><body><div></div></body></tt>"""
+        assertEquals(mapOf("v1" to "Lea", "v2" to "Max", "v1000" to "Lea & Max"), parseTTMLAgentNames(ttml))
+    }
+
     // -- background vocals side by side --
 
     @Test fun `two background spans side by side stay apart`() {

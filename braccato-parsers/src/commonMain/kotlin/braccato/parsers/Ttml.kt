@@ -81,6 +81,27 @@ private fun extractAgentMapping(metadataElements: List<XmlNode>): Map<String, St
     return mapping
 }
 
+/**
+ * The singers' names, by the agent ids lines carry once parsed (v1, v2, …, v1000 for a group), as the
+ * document's head gives them (`<ttm:agent xml:id="…" type="person"><ttm:name>…</ttm:name>`). Not
+ * upstream, which reads no names: for a host that shows who sings. Agents without a name are left out.
+ */
+fun parseTTMLAgentNames(content: String): Map<String, String> {
+    val names = LinkedHashMap<String, String>()
+    var voiceIndex = 0
+    val agentRegex = Regex("""<(?:[\w.-]+:)?agent\b([^>]*?)(/>|>(.*?)</(?:[\w.-]+:)?agent>)""", RegexOption.DOT_MATCHES_ALL)
+    for (m in agentRegex.findAll(content)) {
+        val attrs = m.groupValues[1]
+        val id = Regex("""(?:[\w.-]+:)?\bid\s*=\s*"([^"]*)"""").find(attrs)?.groupValues?.get(1)
+        if (id.isNullOrEmpty()) continue
+        val type = Regex("""\btype\s*=\s*"([^"]*)"""").find(attrs)?.groupValues?.get(1)
+        val mapped = if (type == "person" || type == "character") "v${++voiceIndex}" else "v1000"
+        val name = Regex("""<(?:[\w.-]+:)?name\b[^>]*>(.*?)</""", RegexOption.DOT_MATCHES_ALL).find(m.groupValues[3])?.groupValues?.get(1)?.let(::decodeEntities)?.trim()
+        if (!name.isNullOrEmpty()) names[mapped] = name
+    }
+    return names
+}
+
 // -- Spans --------------------------------------------
 
 /**
