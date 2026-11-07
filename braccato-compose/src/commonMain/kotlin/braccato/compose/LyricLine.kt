@@ -153,7 +153,7 @@ private fun ContentFlow(
                 when (item) {
                     is LineItem.Space -> pendingSpace = true
                     is LineItem.Group -> if (item.words.isNotEmpty()) {
-                        add(item to pendingSpace)
+                        add(item.splitForBreaking() to pendingSpace)
                         pendingSpace = false
                     }
                 }
@@ -385,6 +385,15 @@ internal fun LyricLine(
                 ContentFlow(background, backgroundStyle, measurer, backgroundContext, alignment, Modifier.padding(top = theme.fontSize * 0.1f))
             }
 
+            // Which way wrapped decorations line up, on the screen: a right-hand line's translation ran
+            // over two lines flush left beneath it (Kodama, 2026-11-07). Absolute, since the decorations
+            // set a layout direction of their own.
+            val toRight = (side == LineSide.RIGHT && !rtl) || (side == LineSide.START && rtl)
+            val decorationAlign = when {
+                side == LineSide.CENTER -> androidx.compose.ui.text.style.TextAlign.Center
+                toRight -> androidx.compose.ui.text.style.TextAlign.Right
+                else -> androidx.compose.ui.text.style.TextAlign.Left
+            }
             val romanizedStyle = remember(theme, density) {
                 with(density) {
                     TextStyle(
@@ -410,7 +419,7 @@ internal fun LyricLine(
                             val timedContext = WordContext(theme, effectiveEnd, live, time, emPx / 1.25f, glowRadiusPx / 1.25f, theme.inactiveColor)
                             ContentFlow(timed.main, romanizedStyle.copy(color = Color.Unspecified), measurer, timedContext, Alignment.Start)
                         } else {
-                            MotionText(romanization.text, romanizedStyle, live)
+                            MotionText(romanization.text, romanizedStyle.copy(textAlign = decorationAlign), live)
                         }
                     }
                 }
@@ -429,7 +438,7 @@ internal fun LyricLine(
             AnimatedDecoration(decorations.translation, theme, with(density) { theme.translatedFontSize.toPx() }, onDecorationShift) { translation ->
                 val translatedDirection = if (translation.direction == TextDirection.RTL) LayoutDirection.Rtl else LayoutDirection.Ltr
                 CompositionLocalProvider(LocalLayoutDirection provides translatedDirection) {
-                    MotionText(translation.text, translatedStyle, live, Modifier.padding(top = 8.dp))
+                    MotionText(translation.text, translatedStyle.copy(textAlign = decorationAlign), live, Modifier.padding(top = 8.dp))
                 }
             }
         }
