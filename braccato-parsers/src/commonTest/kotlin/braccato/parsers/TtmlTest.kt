@@ -385,6 +385,19 @@ class TTMLParserTest {
         assertEquals("Hello(echo)(echo)", lines[0].words)
     }
 
+    // -- background vocals side by side --
+
+    @Test fun `two background spans side by side stay apart`() {
+        val ttml = """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>""" +
+            """<p begin="66.5s" end="68.3s"><span begin="66.5s" end="67.0s">ダーリン</span>""" +
+            """<span ttm:role="x-bg"><span begin="67.0s" end="67.2s">ベイ</span><span begin="67.2s" end="67.4s">ビー</span></span>""" +
+            """<span ttm:role="x-bg"><span begin="67.9s" end="68.0s">Ha-</span><span begin="68.0s" end="68.3s">ha</span></span>""" +
+            """</p></div></body></tt>"""
+        val parts = nonInstrumental(parseTTMLContent(ttml).lyrics)[0].parts!!
+        val background = parts.filter { it.isBackground == true }.joinToString("") { it.words }
+        assertEquals("ベイビー Ha-ha", background)
+    }
+
     // -- explicit content --
 
     private fun explicitTtml(attr: String) = """<tt xmlns="http://www.w3.org/ns/ttml"

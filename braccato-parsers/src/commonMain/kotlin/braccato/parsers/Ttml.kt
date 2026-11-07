@@ -112,6 +112,14 @@ private fun parseLyricPart(paragraph: List<XmlNode>, beginTime: Double): LyricPa
             // traverse one span in. This is a bg lyric
             isBackground = true
             localP = element.childrenOf("span") ?: emptyList()
+            // Not upstream: two background spans side by side are two calls, and with nothing between
+            // them their words ran into one ("ベイビー" + "Uh-ha" = "ベイビーUh-ha", IRIS OUT on Spicy
+            // Lyrics, 2026-11-07). A space keeps them apart, as one between their spans would.
+            val last = parts.lastOrNull()
+            if (last != null && last.isBackground == true && !last.words.endsWith(" ")) {
+                parts += LyricPart(startTimeMs = last.startTimeMs + last.durationMs, durationMs = 0.0, words = " ", isBackground = true)
+                text.append(" ")
+            }
         }
 
         for (subPart in localP) {
