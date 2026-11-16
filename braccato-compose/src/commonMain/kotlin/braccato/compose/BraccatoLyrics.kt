@@ -518,4 +518,4 @@ internal fun Credits(names: String, theme: BraccatoTheme, focused: Boolean, modi
 }
 
 /** How long two lines must sing together, in seconds, for the name capsule to split. */
-private const val VOICE_OVERLAP_S = 0.7
+internal const val VOICE_OVERLAP_S = 0.7

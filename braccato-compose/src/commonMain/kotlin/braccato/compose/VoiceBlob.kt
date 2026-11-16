@@ -27,6 +27,8 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -46,8 +48,26 @@ class VoiceLabels(
     val tint: ((agent: String) -> Color?)? = null,
     /** How far above the view's bottom edge it sits, clear of what the host lays over that edge. */
     val bottom: androidx.compose.ui.unit.Dp = 16.dp,
+    /**
+     * What lies behind the lyrics, for the capsule to blur too: over a video, its picture. The host
+     * records it into this layer and tells where the layer stands on screen ([backdropOrigin], in root
+     * coordinates). Without it the capsule blurs only the lyrics behind it.
+     */
+    val backdrop: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
+    val backdropOrigin: () -> Offset = { Offset.Zero },
+    /** Added to the capsule's own darkening (0.22), for a bright picture behind it. */
+    val darken: Float = 0f,
+    /** The capsule's size against its own (13 sp names, 26 dp high): 1 leaves it. */
+    val scale: Float = 1f,
 ) {
     val useful: Boolean get() = names.size >= 2
+
+    /**
+     * How far [BraccatoStage] raises its floor for the capsule's own line: the capsule, its distance
+     * from the bottom, and a little air. A host drawing a second stage beside it (a shadow) without
+     * voices raises that one by the same.
+     */
+    val stageRoom: androidx.compose.ui.unit.Dp get() = if (useful) 26.dp * scale + bottom + 10.dp else 0.dp
 }
 
 /**
@@ -139,13 +159,13 @@ internal fun VoiceBlob(
     val blurred = androidx.compose.ui.graphics.rememberGraphicsLayer()
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
-    val style = remember(theme) { TextStyle(fontFamily = theme.fontFamily, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White) }
+    val style = remember(theme, voices.scale) { TextStyle(fontFamily = theme.fontFamily, fontSize = 13.sp * voices.scale, fontWeight = FontWeight.SemiBold, color = Color.White) }
     val width = with(density) { maxWidth.toPx() }
     val height = with(density) { maxHeight.toPx() }
     val bottom = with(density) { voices.bottom.toPx() }
-    val h = with(density) { 26.dp.toPx() }
-    val pad = with(density) { 12.dp.toPx() }
-    val gap = with(density) { 8.dp.toPx() }
+    val h = with(density) { 26.dp.toPx() } * voices.scale
+    val pad = with(density) { 12.dp.toPx() } * voices.scale
+    val gap = with(density) { 8.dp.toPx() } * voices.scale
     val inset = with(density) { (theme.fontSize * 0.25f).toPx() }
     val slots = remember { listOf(Slot(), Slot()) }
     val shown = remember { Animatable(0f) }
@@ -170,7 +190,8 @@ internal fun VoiceBlob(
             }
         }
         val first = shown.value == 0f
-        val move = spring<Float>(dampingRatio = 0.72f, stiffness = 260f, visibilityThreshold = 0.3f)
+        // Fully damped: it glides into place without going past it and coming back (Kodama, 2026-11-16).
+        val move = spring<Float>(dampingRatio = 1f, stiffness = 260f, visibilityThreshold = 0.3f)
         coroutineScope {
             launch { shown.animateTo(1f, tween(220)) }
             pills.forEachIndexed { i, p ->
@@ -209,7 +230,8 @@ internal fun VoiceBlob(
         }
     }
 
-    Canvas(Modifier.fillMaxSize()) {
+    var origin by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Offset.Zero) }
+    Canvas(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         val a = shown.value
         if (a <= 0f) {
             if (glass.shape != null) glass.shape = null
@@ -228,11 +250,13 @@ internal fun VoiceBlob(
         if (bounds != glass.bounds) { glass.bounds = bounds; glass.shape = path }
         // Frosted: the lyrics behind it, blurred. Under that a little dark, where a blur cannot be had
         // (Android before 12) and the text would show through sharp.
-        drawPath(path, Color.Black.copy(alpha = 0.22f * a))
+        drawPath(path, Color.Black.copy(alpha = (0.22f + voices.darken) * a))
         val r = 14.dp.toPx()
         val area = Rect(bounds.left - r, bounds.top - r, bounds.right + r, bounds.bottom + r)
         blurred.renderEffect = androidx.compose.ui.graphics.BlurEffect(r, r, androidx.compose.ui.graphics.TileMode.Decal)
         blurred.record(androidx.compose.ui.unit.IntSize(area.width.toInt().coerceAtLeast(1), area.height.toInt().coerceAtLeast(1))) {
+            // The picture behind first, where it stands against this canvas; the lyrics over it.
+            voices.backdrop?.let { b -> val o = voices.backdropOrigin() - origin; translate(o.x - area.left, o.y - area.top) { drawLayer(b) } }
             translate(-area.left, -area.top) { drawLayer(glass.text) }
         }
         clipPath(path) { translate(area.left, area.top) { drawLayer(blurred) } }

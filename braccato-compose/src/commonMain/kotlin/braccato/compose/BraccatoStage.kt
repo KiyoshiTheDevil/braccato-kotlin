@@ -9,7 +9,12 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -26,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import braccato.core.BuiltLine
 import braccato.core.BuiltLyrics
 import braccato.core.FrameStatus
@@ -63,6 +69,8 @@ internal fun stageSide(line: BuiltLine, isDuet: Boolean): LineSide {
  *
  * @param onStageLayout Where the lines being sung sit, in this view's coordinates, or null when nothing
  *   sung is on stage. A host draws its own backdrop from it.
+ * @param voices Who sings: the same name capsule as [BraccatoLyrics] has, on a line of its own under
+ *   the stage, which is raised by its height, so the capsule always stands in the same place.
  */
 @Composable
 fun BraccatoStage(
@@ -74,6 +82,7 @@ fun BraccatoStage(
     decorations: (BuiltLine) -> LineDecorations = ::lyricDecorations,
     onStageLayout: ((StageBox?) -> Unit)? = null,
     wallClockMs: (() -> Double)? = null,
+    voices: VoiceLabels? = null,
 ) {
     val lines = lyrics.lines
     // The song on screen, so lyrics built again with the same lines keep the view as it is.
@@ -92,6 +101,10 @@ fun BraccatoStage(
     val heights = remember(song) { mutableStateListOf<Float>().apply { repeat(items.size) { add(0f) } } }
     val widths = remember(song) { FloatArray(items.size) }
     var lastBox by remember(song) { mutableStateOf<StageBox?>(null) }
+    val showVoices = voices?.useful == true
+    var singing by remember(song) { mutableStateOf<Singing?>(null) }
+    val textLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+    val glass = remember(textLayer) { VoiceGlass(textLayer) }
     // Sides only when both are sung, so a song with one singer stays centred whichever voice it is.
     val isDuet = remember(song) {
         val sung = lines.filter { !it.isInstrumental && !it.isBlank && it.agent != "v1000" }
@@ -109,6 +122,17 @@ fun BraccatoStage(
                 if (frame.status == FrameStatus.SYNCED) {
                     clock.lyricTime = frame.lyricTime
                     frame.stageRoles?.let { if (it != roles) roles = it }
+                    // Who sings now, as BraccatoLyrics decides it; between lines the last ones stay.
+                    if (showVoices) {
+                        val t = clock.lyricTime
+                        val now = lines.indices.filter { !lines[it].isInstrumental && t >= lines[it].time && t < effectiveEnds[it] }
+                        if (now.isNotEmpty()) {
+                            val first = now.first()
+                            val together = now.filter { it == first || kotlin.math.min(effectiveEnds[it], effectiveEnds[first]) - kotlin.math.max(lines[it].time, lines[first].time) >= VOICE_OVERLAP_S }
+                            val s = Singing(together.map { lines[it].agent ?: "v1" }.distinct())
+                            if (s != singing) singing = s
+                        }
+                    }
                 }
             }
         }
@@ -116,7 +140,9 @@ fun BraccatoStage(
 
     val density = LocalDensity.current
     BoxWithConstraints(modifier) {
-        val stageHeight = with(density) { maxHeight.toPx() }
+        // With the name capsule, the stage's floor is raised to leave it a line of its own below.
+        val capsuleRoom = if (showVoices) with(density) { voices!!.stageRoom.toPx() } else 0f
+        val stageHeight = with(density) { maxHeight.toPx() } - capsuleRoom
         val gap = with(density) { theme.fontSize.toPx() } * STAGE_GAP_EM
         val metrics = items.indices.map { StageMetrics(height = heights[it].toDouble(), left = 0.0, width = widths[it].toDouble(), originX = 0.0) }
         val placements = remember(roles, metrics, stageHeight) {
@@ -132,6 +158,17 @@ fun BraccatoStage(
         // with the one above it, and the next one waiting below.
         val shown = if (current < 0) listOf(0) else ((current - 2)..(current + 1)).filter { it in items.indices }
 
+        Box(
+            Modifier.fillMaxSize().then(
+                // The text into a layer for the name capsule to blur, and left out where it lies.
+                if (!showVoices) Modifier else Modifier.drawWithContent {
+                    glass.text.record { this@drawWithContent.drawContent() }
+                    val shape = glass.shape
+                    if (shape == null) drawLayer(glass.text)
+                    else clipPath(shape, androidx.compose.ui.graphics.ClipOp.Difference) { drawLayer(glass.text) }
+                },
+            ),
+        ) {
         for (index in shown) {
             key(index) {
                 val role = roles[index]
@@ -184,5 +221,7 @@ fun BraccatoStage(
                 }
             }
         }
+        }
+        if (showVoices) VoiceBlob(voices = voices!!, singing = singing, theme = theme, glass = glass)
     }
 }
