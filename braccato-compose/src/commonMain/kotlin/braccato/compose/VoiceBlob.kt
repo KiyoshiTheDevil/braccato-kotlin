@@ -55,7 +55,10 @@ class VoiceLabels(
      */
     val backdrop: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
     val backdropOrigin: () -> Offset = { Offset.Zero },
-    /** Added to the capsule's own darkening (0.22), for a bright picture behind it. */
+    /**
+     * Added to the capsule's own darkening (0.22), for a bright picture behind it. Above 0 it is laid
+     * over the blurred backdrop instead of the light frost.
+     */
     val darken: Float = 0f,
     /** The capsule's size against its own (13 sp names, 26 dp high): 1 leaves it. */
     val scale: Float = 1f,
@@ -260,7 +263,10 @@ internal fun VoiceBlob(
             translate(-area.left, -area.top) { drawLayer(glass.text) }
         }
         clipPath(path) { translate(area.left, area.top) { drawLayer(blurred) } }
-        drawPath(path, Color.White.copy(alpha = 0.12f * a))
+        // The extra dark goes over the blur: under it, an opaque picture behind (a video) hid it.
+        // Asked for, the dark replaces the light frost on top, which would take it back.
+        if (voices.darken > 0f) drawPath(path, Color.Black.copy(alpha = (0.22f + voices.darken) * a))
+        else drawPath(path, Color.White.copy(alpha = 0.12f * a))
         // The singers' colours, when asked for, lie over their own capsules.
         val tint = voices.tint
         listOfNotNull(slots[0] to r0, r1?.let { slots[1] to it }).forEach { (s, r) ->
