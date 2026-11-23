@@ -33,6 +33,11 @@ kotlin {
 }
 
 dokka {
+    // braccato's mark on this module's pages too, which carry their own stylesheets.
+    pluginsConfiguration.html {
+        customAssets.from(rootProject.file("docs/icon.png"))
+        customStyleSheets.from(rootProject.file("docs/dokka-logo.css"))
+    }
     dokkaSourceSets.configureEach {
         // Every public declaration is documented; the build says which one is not.
         reportUndocumented.set(true)
