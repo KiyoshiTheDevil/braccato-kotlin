@@ -67,7 +67,7 @@ private fun measureRuns(measurer: TextMeasurer, word: BuiltWord, style: TextStyl
         into.runs = letters.map { measurer.measure(it, style, overflow = TextOverflow.Visible, softWrap = false) }
         val total = into.runs.sumOf { it.size.width }.toFloat()
         // A right-to-left word's letters from the right: the browser's bidi does it upstream, here the
-        // letters were set left to right and Hebrew read backwards (Kodama Next, 2026-11-23).
+        // letters were set left to right and Hebrew read backwards.
         var x = 0f
         into.xs = FloatArray(letters.size) { i ->
             val w = into.runs[i].size.width
@@ -155,7 +155,7 @@ internal fun WordView(
                 }
             },
         // The glow below is laid at the word's left edge: Start, right to left, put it at the right edge, over
-        // the next word (Kodama Next, 2026-11-23).
+        // the next word.
         contentAlignment = androidx.compose.ui.AbsoluteAlignment.TopLeft,
     ) {
         if (context.live && theme.animations.highlightGlow && margin > 0) {

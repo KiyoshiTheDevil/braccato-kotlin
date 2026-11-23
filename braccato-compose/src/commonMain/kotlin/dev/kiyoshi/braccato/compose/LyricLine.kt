@@ -167,7 +167,7 @@ private fun ContentFlow(
     val words = remember(groups) { groups.flatMap { it.first.words } }
     val slots = remember(words) { List(words.size) { FlowSlot() } }
 
-    // The nudge goes along the reading: to the left, right to left (Kodama Next, 2026-11-23).
+    // The nudge goes along the reading: to the left, right to left.
     val readingSign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
     Layout(
         content = {
@@ -221,7 +221,7 @@ private fun ContentFlow(
                     slots[i].wobbles = true
                     slots[i].groupTime = group.words[0].time
                     // Along the reading order; right to left that lies the other way on the screen, and the
-                    // words spread from the group's centre to the wrong side, into each other (Kodama Next, 2026-11-23).
+                    // words spread from the group's centre to the wrong side, into each other.
                     val along = (x + placeables[i].width / 2f) - (groupStart + groupWidth / 2f)
                     slots[i].fromGroupCentre = if (layoutDirection == LayoutDirection.Rtl) -along else along
                     put(i)
@@ -397,7 +397,7 @@ internal fun LyricLine(
             }
 
             // Which way wrapped decorations line up, on the screen: a right-hand line's translation ran
-            // over two lines flush left beneath it (Kodama, 2026-11-07). Absolute, since the decorations
+            // over two lines flush left beneath it. Absolute, since the decorations
             // set a layout direction of their own.
             val toRight = (side == LineSide.RIGHT && !rtl) || (side == LineSide.START && rtl)
             val decorationAlign = when {

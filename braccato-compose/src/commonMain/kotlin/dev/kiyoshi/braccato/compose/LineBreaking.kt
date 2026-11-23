@@ -51,7 +51,7 @@ internal fun canBreakBetween(before: String, after: String): Boolean {
 /**
  * A word with CJK in it, cut where a line may break. The layout breaks only between words, and a line
  * synced by line holds its whole Japanese line as one word, without a space: wider than the view, it
- * ran out over the edge (Kodama, 2026-11-07). Each piece keeps the word's place in time; a word timed
+ * ran out over the edge. Each piece keeps the word's place in time; a word timed
  * on its own gets its time shared out by length, so the sweep runs on across the pieces as it did.
  */
 internal fun splitForBreaking(w: BuiltWord): List<BuiltWord> {

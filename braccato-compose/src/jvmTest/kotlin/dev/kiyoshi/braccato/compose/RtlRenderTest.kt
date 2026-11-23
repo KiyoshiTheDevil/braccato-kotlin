@@ -1,4 +1,4 @@
-// Hebrew, word timed: its letters from the right, the sweep from the right (Kodama Next, 2026-11-23).
+// Hebrew, word timed: its letters from the right, the sweep from the right.
 package dev.kiyoshi.braccato.compose
 
 import dev.kiyoshi.braccato.core.SetLyricsOptions

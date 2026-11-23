@@ -186,7 +186,7 @@ class TimelineTest {
 
 /**
  * A source like Media3's `ExoPlayer.currentPosition`, which changes about ten times a second, read at
- * 120 frames a second as kodama-next does on Android.
+ * 120 frames a second, as a phone may draw.
  */
 class HeldReadingClockTest {
     private val frameMs = 1000.0 / 120

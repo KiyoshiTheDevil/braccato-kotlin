@@ -86,7 +86,7 @@ class DecorationMotionTest {
 
     @Test fun `one line every four frames`() = run("one line every four frames", 4)
 
-    /** As kodama-next does it: the lyrics are built again on every switch, translations on the lines. */
+    /** As a host may do it: the lyrics are built again on every switch, translations on the lines. */
     @Test fun `lyrics built again with translations on their lines`() {
         val path = System.getenv("BRACCATO_RENDER_FILE") ?: return
         val text = File(path).readText()

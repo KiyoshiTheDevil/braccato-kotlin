@@ -15,7 +15,7 @@ kotlin {
     jvm {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
-    // The same Android settings as Kodama NEXT: Compose 1.12 needs compileSdk 37.
+    // Compose 1.12 needs compileSdk 37.
     android {
         namespace = "dev.kiyoshi.braccato.types"
         compileSdk = 37

@@ -1,6 +1,6 @@
 // Who sings: a name at the foot of the lyrics, in a capsule that glides to the singer's side and takes
 // their name's width, splits in two when two sing, and flows back together. Not upstream, which shows
-// no names; Kodama asked for it (2026-11-07) in place of a row of badges under the lyrics.
+// no names; added in place of a row of badges under the lyrics.
 package dev.kiyoshi.braccato.compose
 
 import androidx.compose.animation.core.Animatable
@@ -153,7 +153,7 @@ private class Slot {
 
 /**
  * In one place at the foot of the lyrics: over the line being sung it went away and came back with
- * every line (Kodama, 2026-11-07). Only sideways it moves, to whoever sings.
+ * every line. Only sideways it moves, to whoever sings.
  */
 @Composable
 internal fun VoiceBlob(
@@ -197,7 +197,7 @@ internal fun VoiceBlob(
             }
         }
         val first = shown.value == 0f
-        // Fully damped: it glides into place without going past it and coming back (Kodama, 2026-11-16).
+        // Fully damped: it glides into place without going past it and coming back.
         val move = spring<Float>(dampingRatio = 1f, stiffness = 260f, visibilityThreshold = 0.3f)
         coroutineScope {
             launch { shown.animateTo(1f, tween(220)) }
