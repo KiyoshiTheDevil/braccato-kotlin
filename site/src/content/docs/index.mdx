@@ -1,0 +1,47 @@
+---
+title: Introduction
+description: braccato-kotlin brings Braccato, the synchronized lyrics engine of Better Lyrics, to Kotlin and Compose Multiplatform.
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+
+braccato-kotlin is a Kotlin port of [Braccato](https://github.com/better-lyrics/braccato), the synchronized
+lyrics engine from [Better Lyrics](https://better-lyrics.boidu.dev). It reads lyrics files, times every
+line and word against a player, and draws them with Compose Multiplatform, on the desktop JVM and on
+Android.
+
+It is a port rather than a binding: there is no WebView and no JavaScript runtime. The code follows
+upstream file for file, so changes there can be carried over, and the views draw what upstream's
+stylesheet draws, with its values.
+
+<CardGrid>
+	<Card title="Every common format" icon="document">
+		TTML, LRC (plain and enhanced), SRT, QRC and plain text, with background vocals, singers,
+		translations and the songwriters' credits.
+	</Card>
+	<Card title="Any player" icon="rocket">
+		Hand over the player's position as it comes. The view carries it smoothly from frame to frame,
+		even when the player reports it only ten times a second.
+	</Card>
+	<Card title="Two views" icon="laptop">
+		Scrolling lyrics with the word sweep, glow and letter wave, or a stage that shows only the line
+		being sung.
+	</Card>
+	<Card title="Better Lyrics themes" icon="seti:css">
+		A theme's `--blyrics-*` properties and `blyrics-*` settings apply as they are.
+	</Card>
+</CardGrid>
+
+## The modules
+
+| Module | What it does |
+|---|---|
+| `braccato-types` | The lyric shapes: lines, timed parts, sync types |
+| `braccato-parsers` | Reads lyrics files into those shapes |
+| `braccato-core` | Builds lines, times them and decides what scrolls where, without a UI |
+| `braccato-compose` | Draws them with Compose: the scrolling view and the stage |
+
+Most apps need `braccato-compose` and `braccato-parsers`; the other two come along with them.
+
+<LinkCard title="Install it" href="/installation/" description="Add the modules to a Gradle build." />
+<LinkCard title="Show your first lyrics" href="/quickstart/" description="From a lyrics file to lines that light up word by word." />

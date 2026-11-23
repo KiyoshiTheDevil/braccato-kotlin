@@ -1,0 +1,37 @@
+/* braccato's red over Starlight's defaults (D1 dark). */
+:root {
+	--sl-color-accent-low: #3a1a1c;
+	--sl-color-accent: #e26363;
+	--sl-color-accent-high: #ffb4b4;
+	--sl-color-white: #e9ecf1;
+	--sl-color-gray-1: #d3d7de;
+	--sl-color-gray-2: #b2b8c3;
+	--sl-color-gray-3: #9aa1ae;
+	--sl-color-gray-4: #5b6270;
+	--sl-color-gray-5: #222632;
+	--sl-color-gray-6: #151821;
+	--sl-color-black: #0d0f14;
+	--sl-font: "Inter", system-ui, sans-serif;
+	--sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+:root[data-theme="light"] {
+	--sl-color-accent-low: #fde9e9;
+	--sl-color-accent: #c94343;
+	--sl-color-accent-high: #7a2424;
+	--sl-color-white: #1f2328;
+	--sl-color-gray-1: #2d333b;
+	--sl-color-gray-2: #454c56;
+	--sl-color-gray-3: #5b6270;
+	--sl-color-gray-4: #8a909a;
+	--sl-color-gray-5: #ececef;
+	--sl-color-gray-6: #f6f7f9;
+	--sl-color-gray-7: #fafafa;
+	--sl-color-black: #ffffff;
+}
+
+/* The logo a little smaller than Starlight's default title height. */
+.site-title img {
+	height: 1.75rem;
+	width: auto;
+}
