@@ -1,0 +1,9 @@
+/* braccato's mark beside the project's name, in place of Dokka's own. */
+.library-name--link::before {
+    background-image: url('../images/icon.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-color: transparent;
+    -webkit-mask-image: none;
+    mask-image: none;
+}

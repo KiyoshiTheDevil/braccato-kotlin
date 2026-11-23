@@ -23,4 +23,9 @@ dependencies {
 
 dokka {
     moduleName.set("braccato-kotlin")
+    pluginsConfiguration.html {
+        // braccato's mark in place of Dokka's.
+        customAssets.from("docs/icon.png")
+        customStyleSheets.from("docs/dokka-logo.css")
+    }
 }

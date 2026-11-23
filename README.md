@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.png">
+    <img src="docs/logo-light.png" alt="braccato" width="360">
+  </picture>
+</p>
+
 # braccato-kotlin
 
 A Kotlin port of [Braccato](https://github.com/better-lyrics/braccato), the synchronized lyrics engine
