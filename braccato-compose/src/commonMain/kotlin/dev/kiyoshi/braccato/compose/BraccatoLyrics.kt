@@ -56,6 +56,7 @@ import dev.kiyoshi.braccato.core.LyricsLayout
 import dev.kiyoshi.braccato.core.LyricsTimeline
 import dev.kiyoshi.braccato.core.ScrollAction
 import dev.kiyoshi.braccato.core.ScrollItem
+import dev.kiyoshi.braccato.core.ScrollPadding
 import dev.kiyoshi.braccato.core.ScrollPaddingMeasurements
 import dev.kiyoshi.braccato.core.ScrollViewport
 import dev.kiyoshi.braccato.core.TickOptions
@@ -67,88 +68,6 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.time.TimeSource
-
-/** One reading of the player. */
-@Immutable
-public data class PlaybackSnapshot(
-    /** Seconds into the song. */
-    val timeS: Double,
-    /** Whether the song is playing. */
-    val isPlaying: Boolean,
-    /** How fast it plays, 1 for normal speed. */
-    val playbackRate: Double = 1.0,
-    /**
-     * When the time was read, on the view's wall clock, in milliseconds. Given, the view extrapolates
-     * the time to now while playing; left out, the time is taken as current.
-     */
-    val sampledAtMs: Double? = null,
-)
-
-/** What the view reports back, and the one thing a host can ask of it. */
-@Stable
-public class BraccatoLyricsState {
-    /** The user scrolled the view away and autoscroll waits: offer the way back. */
-    public var resumeAffordanceVisible: Boolean by mutableStateOf(false)
-        internal set
-
-    internal var timeline: LyricsTimeline? = null
-
-    /** Autoscroll back, now. */
-    public fun resumeAutoscroll() {
-        timeline?.resumeAutoscroll()
-        resumeAffordanceVisible = false
-    }
-}
-
-/** A [BraccatoLyricsState] that lives as long as the composition. */
-@Composable
-public fun rememberBraccatoLyricsState(): BraccatoLyricsState = remember { BraccatoLyricsState() }
-
-/** The lyric time and the wall clock, as of the last frame. Read while drawing. */
-internal class LyricClock {
-    var lyricTime by mutableDoubleStateOf(0.0)
-    var wallMs by mutableDoubleStateOf(0.0)
-}
-
-/** One committed scroll, which every line follows on its own schedule. */
-private class ScrollStagger(
-    val startMs: Double,
-    val deltaPx: Double,
-    val activeIndex: Int,
-    val scale: Double,
-)
-
-/**
- * The lines a decoration moved, sliding from where they were to where it put them:
- * `captureDecorationSlide` upstream. One entry per line, then the credits.
- */
-private class DecorationSlide(val shifts: DoubleArray) {
-    /** Until the next frame anchors it, the slide holds every line where it was. */
-    var startMs = Double.POSITIVE_INFINITY
-    var anchored = false
-}
-
-private fun BraccatoTheme.slideOffset(slide: DecorationSlide, index: Int, nowMs: Double): Float {
-    val shift = slide.shifts.getOrElse(index) { 0.0 }
-    if (shift == 0.0) return 0f
-    val p = progress(nowMs - slide.startMs, decorationEntryMs)
-    return (shift * (1 - decorationEntryEasing.transform(p))).toFloat()
-}
-
-/** Below half a pixel, upstream does not slide a line. */
-private const val DECORATION_MIN_SHIFT_PX = 0.5
-
-/** How many frames a decoration change waits for the layout it causes. */
-private const val DECORATION_SHIFT_FRAMES = 3
-
-private fun BraccatoTheme.staggerOffset(stagger: ScrollStagger, index: Int, nowMs: Double): Float {
-    val relative = index - stagger.activeIndex
-    val activeMs = lineScrollDurationMs(0, stagger.deltaPx)
-    val ownMs = lineScrollDurationMs(relative, stagger.deltaPx)
-    val durationMs = activeMs + (ownMs - activeMs) * stagger.scale
-    val p = progress(nowMs - stagger.startMs, durationMs)
-    return (stagger.deltaPx * (1 - lyricScrollEasing.transform(p))).toFloat()
-}
 
 /**
  * What makes lyrics the same song to the view: each line's timing, words, voice and kind, and what is
@@ -320,18 +239,8 @@ public fun BraccatoLyrics(
                 state.resumeAffordanceVisible = frame.resumeAffordanceVisible
 
                 val t = clock.lyricTime
-                if (showVoices && frame.status == FrameStatus.SYNCED) {
-                    // Who sings now; between lines the last ones stay.
-                    val now = lines.indices.filter { !lines[it].isInstrumental && t >= lines[it].time && t < effectiveEnds[it] }
-                    if (now.isNotEmpty()) {
-                        // A second voice only for a real overlap: lines that touch for a moment had the
-                        // capsule start to split and fold back at once, names over each other.
-                        val first = now.first()
-                        val together = now.filter { it == first || min(effectiveEnds[it], effectiveEnds[first]) - max(lines[it].time, lines[first].time) >= VOICE_OVERLAP_S }
-                        val s = Singing(together.map { lines[it].agent ?: "v1" }.distinct())
-                        if (s != singing) singing = s
-                    }
-                }
+                // Who sings now; between lines the last ones stay.
+                if (showVoices && frame.status == FrameStatus.SYNCED) singersAt(lines, effectiveEnds, t)?.let { if (it != singing) singing = it }
                 val tail = max(theme.highlightFadeOutMs, theme.scaleTransitionMs) / 1000 + 0.2
                 for (i in lines.indices) {
                     val isLive = frame.status == FrameStatus.SYNCED && t >= lines[i].time - LIVE_LEAD_S && t < effectiveEnds[i] + tail
@@ -358,20 +267,7 @@ public fun BraccatoLyrics(
                 frame.passiveScrollTop?.let { target -> scrollState.dispatchRawDelta((target - scrollState.value).toFloat()) }
 
                 if (measured) {
-                    val last = lines.lastIndex
-                    val lastBottom = positions[last] + heights[last]
-                    val hasCredits = credits[1] > 0
-                    val (top, bottom) = computeScrollPadding(
-                        ScrollPaddingMeasurements(
-                            viewportHeight = viewportHeight,
-                            targetScrollRatio = theme.targetScrollRatio,
-                            contentHeight = if (hasCredits) credits[0] + credits[1] else lastBottom,
-                            firstLineHeight = heights[0],
-                            lastLineCentre = if (hasCredits) credits[0] + credits[1] / 2 else positions[last] + heights[last] / 2,
-                            lastLineHeight = if (hasCredits) credits[1] else heights[last],
-                            footerHeight = footerHeight[0],
-                        ),
-                    )
+                    val (top, bottom) = scrollPaddingFor(theme, viewportHeight, positions, heights, credits, footerHeight[0])
                     if (abs(top - paddingTop) > 1) paddingTop = top
                     if (abs(bottom - paddingBottom) > 1) paddingBottom = bottom
                 } else if (viewportHeight > 0 && paddingTop == 0.0) {
@@ -432,12 +328,7 @@ public fun BraccatoLyrics(
                             positions[index] = y
                             heights[index] = coordinates.size.height.toDouble()
                         }
-                        .graphicsLayer {
-                            if (staggers.isEmpty() && slides.isEmpty()) return@graphicsLayer
-                            val wall = clock.wallMs
-                            translationY = staggers.sumOf { theme.staggerOffset(it, index, wall).toDouble() }.toFloat() +
-                                slides.sumOf { theme.slideOffset(it, index, wall).toDouble() }.toFloat()
-                        },
+                        .followLineMotion(staggers, slides, theme, clock, staggerIndex = index),
                 )
             }
             lyrics.credits?.let { names ->
@@ -452,12 +343,7 @@ public fun BraccatoLyrics(
                             credits[0] = y
                             credits[1] = coordinates.size.height.toDouble()
                         }
-                        .graphicsLayer {
-                            if (staggers.isEmpty() && slides.isEmpty()) return@graphicsLayer
-                            val wall = clock.wallMs
-                            translationY = staggers.sumOf { theme.staggerOffset(it, lines.size, wall).toDouble() }.toFloat() +
-                                slides.sumOf { theme.slideOffset(it, lines.size, wall).toDouble() }.toFloat()
-                        },
+                        .followLineMotion(staggers, slides, theme, clock, staggerIndex = lines.size),
                 )
             }
             footer?.let { content ->
@@ -465,12 +351,7 @@ public fun BraccatoLyrics(
                     Modifier
                         .onPlaced { footerHeight[0] = it.size.height.toDouble() }
                         // One step behind what comes before it, so that it moves with the text rather than ahead of it.
-                        .graphicsLayer {
-                            if (staggers.isEmpty() && slides.isEmpty()) return@graphicsLayer
-                            val wall = clock.wallMs
-                            translationY = staggers.sumOf { theme.staggerOffset(it, lines.size + 1, wall).toDouble() }.toFloat() +
-                                slides.sumOf { theme.slideOffset(it, lines.size, wall).toDouble() }.toFloat()
-                        },
+                        .followLineMotion(staggers, slides, theme, clock, staggerIndex = lines.size + 1, slideIndex = lines.size),
                 ) { content() }
             }
             Spacer(Modifier.height(with(density) { paddingBottom.toFloat().toDp() }))
@@ -487,38 +368,43 @@ public fun BraccatoLyrics(
     }
 }
 
-/** `.blyrics-credits`: who wrote the song, after the last line, brighter once the song is over. */
-@Composable
-internal fun Credits(names: String, theme: BraccatoTheme, focused: Boolean, modifier: Modifier = Modifier) {
-    val density = LocalDensity.current
-    val opacity by animateFloatAsState(
-        if (focused) theme.creditsFocusedOpacity else theme.creditsOpacity,
-        tween(350, easing = theme.decorationEntryEasing),
-    )
-    val style = remember(theme, density) {
-        with(density) {
-            TextStyle(
-                fontFamily = theme.fontFamily,
-                fontSize = theme.creditsFontSize.toSp(),
-                fontWeight = theme.fontWeight,
-                color = theme.textColor,
-            )
-        }
-    }
-    Box(
-        modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                alpha = opacity
-                scaleX = theme.scale
-                scaleY = theme.scale
-                transformOrigin = transformOriginFor(LineSide.START)
-            }
-            .padding(vertical = theme.linePadding, horizontal = theme.fontSize * 0.25f),
-    ) {
-        BasicText("${theme.creditsLabel} $names", style = style)
-    }
+/**
+ * Who sings at lyric time [t]: the voices of the first line being sung and of those that really overlap
+ * it. Null between lines.
+ */
+private fun singersAt(lines: List<BuiltLine>, effectiveEnds: List<Double>, t: Double): Singing? {
+    val now = lines.indices.filter { !lines[it].isInstrumental && t >= lines[it].time && t < effectiveEnds[it] }
+    if (now.isEmpty()) return null
+    // A second voice only for a real overlap: lines that touch for a moment had the capsule start to split
+    // and fold back at once, names over each other.
+    val first = now.first()
+    val together = now.filter { it == first || min(effectiveEnds[it], effectiveEnds[first]) - max(lines[it].time, lines[first].time) >= VOICE_OVERLAP_S }
+    return Singing(together.map { lines[it].agent ?: "v1" }.distinct())
 }
 
-/** How long two lines must sing together, in seconds, for the name capsule to split. */
-internal const val VOICE_OVERLAP_S = 0.7
+/**
+ * The space above the first line and below the last, so that each can reach the scroll target: the
+ * credits count as the last line when there are any. Pixels, top and bottom.
+ */
+private fun scrollPaddingFor(
+    theme: BraccatoTheme,
+    viewportHeight: Double,
+    positions: DoubleArray,
+    heights: DoubleArray,
+    credits: DoubleArray,
+    footerHeight: Double,
+): ScrollPadding {
+    val last = heights.lastIndex
+    val hasCredits = credits[1] > 0
+    return computeScrollPadding(
+        ScrollPaddingMeasurements(
+            viewportHeight = viewportHeight,
+            targetScrollRatio = theme.targetScrollRatio,
+            contentHeight = if (hasCredits) credits[0] + credits[1] else positions[last] + heights[last],
+            firstLineHeight = heights[0],
+            lastLineCentre = if (hasCredits) credits[0] + credits[1] / 2 else positions[last] + heights[last] / 2,
+            lastLineHeight = if (hasCredits) credits[1] else heights[last],
+            footerHeight = footerHeight,
+        ),
+    )
+}

@@ -286,3 +286,6 @@ internal fun VoiceBlob(
         }
     }
 }
+
+/** How long two lines must sing together, in seconds, for the name capsule to split. */
+internal const val VOICE_OVERLAP_S = 0.7
