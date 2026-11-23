@@ -30,15 +30,28 @@ Each module passes on what its API is made of: `braccato-compose` brings `bracca
 `buildLyrics` and `SetLyricsOptions`) and Compose's runtime and UI; `braccato-core` brings
 `braccato-types`. A consumer needs `braccato-compose`, and `braccato-parsers` to read files.
 
-To use the working copy from another Gradle build, include it there; Gradle then builds it along:
+## Installation
+
+From Maven Central, in a Kotlin Multiplatform module's `commonMain` (or any JVM or Android module):
+
+```kotlin
+implementation("dev.kiyoshi:braccato-compose:0.1.0")
+implementation("dev.kiyoshi:braccato-parsers:0.1.0")
+```
+
+The versions are this port's own. Which upstream release a version carries is in
+[UPSTREAM.md](UPSTREAM.md), and what changed in [CHANGELOG.md](CHANGELOG.md).
+
+To work on a copy of the repository from another Gradle build, include it there; Gradle then builds it
+along and takes it in place of the published modules:
 
 ```kotlin
 // settings.gradle.kts
 includeBuild("../braccato-kotlin")
 
 // build.gradle.kts, in commonMain
-implementation("braccato:braccato-compose")
-implementation("braccato:braccato-parsers")
+implementation("dev.kiyoshi:braccato-compose")
+implementation("dev.kiyoshi:braccato-parsers")
 ```
 
 `braccato-core` is everything upstream's renderer decides from numbers alone: how lines are split
@@ -132,6 +145,19 @@ through `sdk.dir` in `local.properties` or `ANDROID_HOME`.
 ```bash
 ./gradlew allTests
 ```
+
+The API reference for all four modules is built with `./gradlew dokkaGenerate`, into
+`build/dokka/html`. Every public declaration is documented, and the build says which one is not.
+
+Publishing goes to Maven Central through the Central Portal and is signed. The credentials and the key
+are never in the repository: `mavenCentralUsername`, `mavenCentralPassword`, `signingInMemoryKey`,
+`signingInMemoryKeyId` and `signingInMemoryKeyPassword` go into `~/.gradle/gradle.properties`.
+
+```bash
+./gradlew publishToMavenCentral
+```
+
+To try a build locally without a key: `./gradlew publishToMavenLocal -PsignAllPublications=false`.
 
 The demo plays a lyric file against a clock of its own, optionally under a Better Lyrics theme:
 

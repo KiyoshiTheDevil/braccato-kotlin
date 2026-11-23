@@ -6,10 +6,9 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.maven.publish)
 }
 
-// The renderer `@braccato/core` builds as DOM, drawn with Compose instead.
-version = "1.17.1"
 
 kotlin {
     jvmToolchain(21)
@@ -50,4 +49,14 @@ dokka {
             remoteUrl("https://github.com/KiyoshiTheDevil/braccato-kotlin/tree/main/braccato-compose/src")
         }
     }
+}
+
+// The coordinates and the POM come from gradle.properties; the javadoc jar is Dokka's HTML.
+mavenPublishing {
+    configure(
+        com.vanniktech.maven.publish.KotlinMultiplatform(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.Dokka("dokkaGeneratePublicationHtml"),
+            sourcesJar = true,
+        ),
+    )
 }

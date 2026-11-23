@@ -4,10 +4,9 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kmp.library)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.maven.publish)
 }
 
-// Mirrors `@braccato/core`, the part of it that is not the DOM. See UPSTREAM.md.
-version = "1.17.1"
 
 kotlin {
     jvmToolchain(21)
@@ -42,4 +41,14 @@ dokka {
             remoteUrl("https://github.com/KiyoshiTheDevil/braccato-kotlin/tree/main/braccato-core/src")
         }
     }
+}
+
+// The coordinates and the POM come from gradle.properties; the javadoc jar is Dokka's HTML.
+mavenPublishing {
+    configure(
+        com.vanniktech.maven.publish.KotlinMultiplatform(
+            javadocJar = com.vanniktech.maven.publish.JavadocJar.Dokka("dokkaGeneratePublicationHtml"),
+            sourcesJar = true,
+        ),
+    )
 }

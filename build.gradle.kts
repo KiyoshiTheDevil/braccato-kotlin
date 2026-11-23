@@ -5,10 +5,12 @@ plugins {
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.android.kmp.library) apply false
     alias(libs.plugins.dokka)
+    alias(libs.plugins.maven.publish) apply false
 }
 
 subprojects {
-    group = "braccato"
+    // The same as GROUP in gradle.properties, which is what the modules publish under.
+    group = "dev.kiyoshi"
 }
 
 // The API reference for all four modules in one site: ./gradlew dokkaGenerate, then build/dokka/html.

@@ -1,0 +1,25 @@
+# Runs every test, and checks that the API reference builds with nothing undocumented, on each push
+# and pull request.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-37
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Tests
+        run: ./gradlew allTests
+      - name: API reference
+        run: ./gradlew dokkaGenerate
