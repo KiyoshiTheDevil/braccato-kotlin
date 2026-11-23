@@ -44,7 +44,9 @@ import kotlinx.coroutines.launch
  * their group count).
  */
 public class VoiceLabels(
+    /** The singers' names, by agent id, as `parseTTMLAgentNames` reads them. */
     public val names: Map<String, String>,
+    /** A colour for a singer's capsule, or null for the default. */
     public val tint: ((agent: String) -> Color?)? = null,
     /** How far above the view's bottom edge it sits, clear of what the host lays over that edge. */
     public val bottom: androidx.compose.ui.unit.Dp = 16.dp,
@@ -54,6 +56,7 @@ public class VoiceLabels(
      * coordinates). Without it the capsule blurs only the lyrics behind it.
      */
     public val backdrop: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
+    /** Where [backdrop] stands, in root coordinates. */
     public val backdropOrigin: () -> Offset = { Offset.Zero },
     /**
      * Added to the capsule's own darkening (0.22), for a bright picture behind it. Above 0 it is laid
@@ -63,6 +66,7 @@ public class VoiceLabels(
     /** The capsule's size against its own (13 sp names, 26 dp high): 1 leaves it. */
     public val scale: Float = 1f,
 ) {
+    /** Whether there is anything to show: two named voices or more. */
     public val useful: Boolean get() = names.size >= 2
 
     /**

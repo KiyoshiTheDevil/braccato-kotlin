@@ -25,6 +25,8 @@ internal fun roundedMs(value: Double): Double {
  * Converts CSS duration value to milliseconds.
  *
  * @return Duration in milliseconds
+ *
+ * @suppress Internal to the braccato modules.
  */
 @InternalBraccatoApi public fun toMs(cssDuration: String): Double {
     if (cssDuration.isEmpty()) return 0.0

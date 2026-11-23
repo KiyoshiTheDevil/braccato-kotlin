@@ -3,6 +3,7 @@ kotlin = "2.4.21"
 compose = "1.12.2"
 coroutines = "1.10.2"
 agp = "9.5.0"
+dokka = "2.3.0"
 
 [libraries]
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose" }
@@ -16,3 +17,4 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 compose = { id = "org.jetbrains.compose", version.ref = "compose" }
 android-kmp-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
+dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }

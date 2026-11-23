@@ -54,10 +54,14 @@ import braccato.core.buildTranslation
 /** What hangs under a line. `injectTranslation` and `injectRomanization` upstream. Equal when it shows the same. */
 @Immutable
 public data class LineDecorations(
+    /** The translation under the line. */
     val translation: BuiltTranslation? = null,
+    /** The romanization under the line. */
     val romanization: BuiltRomanization? = null,
 ) {
+    /** The empty decorations. */
     public companion object {
+        /** Nothing under the line. */
         public val None: LineDecorations = LineDecorations()
     }
 }
@@ -387,7 +391,8 @@ internal fun LyricLine(
             }
 
             ContentFlow(content.main, mainStyle, measurer, mainContext, alignment)
-            content.background?.let { background ->
+            // A row for each group of background vocals.
+            for (background in content.backgrounds) {
                 ContentFlow(background, backgroundStyle, measurer, backgroundContext, alignment, Modifier.padding(top = theme.fontSize * 0.1f))
             }
 

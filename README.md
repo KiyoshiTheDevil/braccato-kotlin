@@ -12,10 +12,14 @@ version this is, maps each file, and lists every difference made on purpose.
 
 | Module | Upstream | State |
 |---|---|---|
-| `braccato-types` | `@braccato/types` 1.0.0 | ported |
-| `braccato-parsers` | `@braccato/parsers` 0.4.0 | ported: TTML, LRC, SRT, QRC, Plain |
-| `braccato-core` | `@braccato/core` 1.17.1 | ported: the engine's logic, without the DOM |
+| `braccato-types` | `@braccato/types` 1.1.0 | ported |
+| `braccato-parsers` | `@braccato/parsers` 0.4.3 | ported: TTML, LRC, SRT, QRC, Plain |
+| `braccato-core` | `@braccato/core` 1.22.0 | ported: the engine's logic, without the DOM |
 | `braccato-compose` | `@braccato/core` renderer and styles | Compose renderer: scroll and stage layouts |
+
+Not ported: `@braccato/provider-blyrics`, the chain that fetches lyrics from providers, and
+`@braccato/rics`, which compiles RICS themes to CSS. An app brings its own lyrics sources, and a RICS
+theme is compiled first and then handed over as CSS (`BraccatoTheme.fromCss`).
 
 Every module is Kotlin Multiplatform with two targets: the desktop JVM (Java 17 bytecode) and
 Android (compileSdk 37, which Compose 1.12 requires, and minSdk 26), built with AGP's

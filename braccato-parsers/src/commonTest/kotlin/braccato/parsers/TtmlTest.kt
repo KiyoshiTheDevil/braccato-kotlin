@@ -385,6 +385,68 @@ class TTMLParserTest {
         assertEquals("Hello(echo)(echo)", lines[0].words)
     }
 
+    // Ported from upstream's 0.4.1 tests: background groups.
+
+    @Test fun `numbers each x-bg span of a line and keeps its text as written`() {
+        val ttml = """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="0s" end="9s"><span begin="0s" end="1s">Lead</span><span ttm:role="x-bg"><span begin="1s" end="2s">(one </span><span begin="2s" end="3s">two)</span></span> <span ttm:role="x-bg"><span begin="3s" end="4s">(three)</span></span></p></div></body></tt>"""
+
+        val line = nonInstrumental(parseTTMLContent(ttml).lyrics)[0]
+
+        assertEquals("Lead(one two) (three)", line.words)
+        assertEquals(
+            listOf("Lead" to null, "(one " to 0, "two)" to 0, " " to null, "(three)" to 1),
+            line.parts!!.map { it.words to it.backgroundGroup },
+        )
+    }
+
+    @Test fun `reads timing written on an x-bg span itself the same as timing on a span inside it`() {
+        fun shape(lead: String, bg: (String, Int) -> String) =
+            parseTTMLContent("""<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="0s" end="4s">$lead${bg("(one)", 1)}${bg("(two)", 2)}</p></div></body></tt>""")
+        val onSpan = { text: String, begin: Int -> """<span ttm:role="x-bg" begin="${begin}s" end="${begin + 1}s">$text</span>""" }
+        val inside = { text: String, begin: Int -> """<span ttm:role="x-bg"><span begin="${begin}s" end="${begin + 1}s">$text</span></span>""" }
+        fun view(result: ParsedTTML) = result.isWordSynced to result.lyrics[0].parts!!.map { listOf(it.words, it.startTimeMs, it.durationMs, it.backgroundGroup) }
+
+        val timedLead = """<span begin="0s" end="1s">Lead</span>"""
+        assertEquals(view(shape(timedLead, inside)), view(shape(timedLead, onSpan)))
+        assertEquals(
+            listOf(listOf("Lead", 0.0, 1000.0, null), listOf("(one)", 1000.0, 1000.0, 0), listOf("(two)", 2000.0, 1000.0, 1)),
+            view(shape(timedLead, onSpan)).second,
+        )
+    }
+
+    @Test fun `keeps a line-timed line line-timed when only its x-bg span carries timing`() {
+        val result = parseTTMLContent("""<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="0s" end="4s">Walking on <span ttm:role="x-bg" begin="2s" end="3s">(walking)</span></p></div></body></tt>""")
+
+        assertEquals(false, result.isWordSynced)
+        assertEquals<List<braccato.types.LyricPart>?>(emptyList(), result.lyrics[0].parts)
+        assertEquals("Walking on (walking)", result.lyrics[0].words)
+    }
+
+    @Test fun `numbers only the x-bg spans that hold text`() {
+        val line = parseTTMLContent(
+            """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="0s" end="4s"><span begin="0s" end="1s">Lead</span><span ttm:role="x-bg"></span><span ttm:role="x-bg"><span begin="1s" end="2s">(one)</span></span><span ttm:role="x-bg"><span begin="2s" end="3s">(two)</span></span></p></div></body></tt>""",
+        ).lyrics[0]
+
+        assertEquals(listOf(0, 1), line.parts!!.filter { it.isBackground == true }.map { it.backgroundGroup })
+    }
+
+    @Test fun `keeps a line line-timed when its only timed main span is empty`() {
+        val result = parseTTMLContent(
+            """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="1s" end="5s"><span begin="1s" end="2s"></span>Hi <span ttm:role="x-bg" begin="2.5s" end="4s">(la)</span></p></div></body></tt>""",
+        )
+
+        assertEquals(false, result.isWordSynced)
+        assertEquals<List<braccato.types.LyricPart>?>(emptyList(), result.lyrics[0].parts)
+    }
+
+    @Test fun `ignores x-bg span timing that has no end`() {
+        val result = parseTTMLContent(
+            """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div><p begin="0s" end="4s"><span begin="0s" end="1s">Lead</span><span ttm:role="x-bg" begin="2s" dur="1s">(one)</span></p></div></body></tt>""",
+        )
+
+        assertTrue(result.lyrics[0].parts!!.all { it.durationMs >= 0 })
+    }
+
     // -- singers' names --
 
     @Test fun `reads the singers' names by their parsed agent ids`() {
@@ -401,6 +463,8 @@ class TTMLParserTest {
 
     // -- background vocals side by side --
 
+    // Two background spans side by side ran into one word ("ベイビーHa-ha", IRIS OUT on Spicy Lyrics). Since 0.4.1 each
+    // is a group of its own, which the renderer gives a row of its own.
     @Test fun `two background spans side by side stay apart`() {
         val ttml = """<tt xmlns="http://www.w3.org/ns/ttml" xmlns:ttm="http://www.w3.org/ns/ttml#metadata"><body><div>""" +
             """<p begin="66.5s" end="68.3s"><span begin="66.5s" end="67.0s">ダーリン</span>""" +
@@ -408,8 +472,8 @@ class TTMLParserTest {
             """<span ttm:role="x-bg"><span begin="67.9s" end="68.0s">Ha-</span><span begin="68.0s" end="68.3s">ha</span></span>""" +
             """</p></div></body></tt>"""
         val parts = nonInstrumental(parseTTMLContent(ttml).lyrics)[0].parts!!
-        val background = parts.filter { it.isBackground == true }.joinToString("") { it.words }
-        assertEquals("ベイビー Ha-ha", background)
+        val groups = parts.filter { it.isBackground == true }.groupBy { it.backgroundGroup }.mapValues { (_, ps) -> ps.joinToString("") { it.words } }
+        assertEquals<Map<Int?, String>>(mapOf(0 to "ベイビー", 1 to "Ha-ha"), groups)
     }
 
     // -- explicit content --

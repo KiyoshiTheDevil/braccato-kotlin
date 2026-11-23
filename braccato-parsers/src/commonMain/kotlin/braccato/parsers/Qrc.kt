@@ -7,7 +7,12 @@ import braccato.types.internal.*
 import kotlin.math.abs
 import kotlin.math.max
 
-/** Song metadata, used to drop opening lines that only echo the title or the artist. */
+/**
+ * Song metadata, used to drop opening lines that only echo the title or the artist.
+ *
+ * @property title The song's title.
+ * @property artist The song's artist.
+ */
 public data class QrcMetadata(
     val title: String? = null,
     val artist: String? = null,
@@ -296,6 +301,7 @@ private fun readSongwriters(qrcXml: String): List<String> {
     return uniqueNames(names)
 }
 
+/** The [LyricParser] for QQ Music's QRC, see [parseQRC]. */
 public object QRCParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isQrc(input)

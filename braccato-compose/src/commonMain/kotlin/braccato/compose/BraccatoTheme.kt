@@ -3,6 +3,7 @@
 // dp, with upstream's `px` read as dp and its `rem` as 16 dp.
 package braccato.compose
 
+import braccato.types.internal.InternalBraccatoApi
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.LinearEasing
@@ -22,51 +23,80 @@ import kotlin.math.max
 /** Which effects run. `--blyrics-animate-*` upstream, each 1 or 0. */
 @Immutable
 public data class BraccatoAnimations(
+    /** Lines grow as they are sung (`--blyrics-animate-line-scale`). */
     val lineScale: Boolean = true,
+    /** Word groups nudge as they start (`--blyrics-animate-word-wobble`). */
     val wordWobble: Boolean = true,
+    /** Words fill with a swipe as they are sung (`--blyrics-animate-highlight-swipe`). */
     val highlightSwipe: Boolean = true,
+    /** Sung words glow (`--blyrics-animate-highlight-glow`). */
     val highlightGlow: Boolean = true,
+    /** Highlights fade in and out (`--blyrics-animate-highlight-fade`). */
     val highlightFade: Boolean = true,
+    /** The view scrolls smoothly, line after line (`--blyrics-animate-scroll`). */
     val scroll: Boolean = true,
+    /** The instrumental note fills and waves (`--blyrics-animate-instrumental`). */
     val instrumental: Boolean = true,
+    /** Translations and romanizations slide in and out (`--blyrics-animate-decoration-entry`). */
     val decorationEntry: Boolean = true,
 ) {
     /** `prefers-reduced-motion: reduce`: no zoom, no wobble, no moving fill. Fades and the swipe stay. */
     public fun reducedMotion(): BraccatoAnimations = copy(lineScale = false, wordWobble = false, instrumental = false, decorationEntry = false)
 }
 
+/**
+ * How the lyrics look and move. The defaults are upstream's stylesheet; most values stand for one of its
+ * `--blyrics-*` custom properties, and [fromCss] applies a Better Lyrics theme on top. Times are in
+ * milliseconds, sizes in `em` are shares of [fontSize].
+ */
 @Immutable
 public data class BraccatoTheme(
     // -- Colors --
     /** `--blyrics-text-color`. Lines are drawn in it, the inactive ones at [inactiveOpacity]. */
     val textColor: Color = Color.White,
+    /** How opaque the line being sung is, against [textColor] (`--blyrics-active-opacity`). */
     val activeOpacity: Float = 1f,
+    /** How opaque the other lines are, against [textColor] (`--blyrics-inactive-opacity`). */
     val inactiveOpacity: Float = 0.3f,
     /** `--blyrics-glow-color`, the highlight's drop shadow. */
     val glowColor: Color = Color.White.copy(alpha = 0.5f),
+    /** The colour of translations and romanizations under a line. */
     val translatedColor: Color = Color.White.copy(alpha = 0.6f),
+    /** `--blyrics-lyric-active-color`: the line being sung, in place of [textColor] at [activeOpacity]. */
+    val lyricActiveColor: Color? = null,
+    /** `--blyrics-lyric-inactive-color`: the other lines, in place of [textColor] at [inactiveOpacity]. */
+    val lyricInactiveColor: Color? = null,
 
     // -- Typography --
+    /** The lyrics' font family. Null: the platform's default. */
     val fontFamily: FontFamily? = null,
     /** `--blyrics-font-size`: 3rem. */
     val fontSize: Dp = 48.dp,
+    /** The weight of sung lines. */
     val fontWeight: FontWeight = FontWeight.Bold,
+    /** The line height, as a multiple of [fontSize]. */
     val lineHeight: Float = 1.333f,
     /**
      * The family for right-to-left lines (Hebrew, Arabic). The system's by default: a family of the app's
-     * own seldom holds those scripts, and on Android the fallback for them came at regular weight, thin
-     * beside the rest (Kodama Next, 2026-11-23). Null keeps [fontFamily].
+     * own seldom holds those scripts, and the platform's fallback for them comes at regular weight, thin
+     * beside the rest. Null keeps [fontFamily].
      */
     val rtlFontFamily: FontFamily? = FontFamily.Default,
+    /** The family of translations and romanizations. Null: [fontFamily]. */
     val translatedFontFamily: FontFamily? = null,
+    /** The size of translations. */
     val translatedFontSize: Dp = 32.dp,
+    /** The weight of translations and romanizations. */
     val translatedFontWeight: FontWeight = FontWeight.SemiBold,
     /** The romanization's own size. Null: as upstream, the translation's over 1.25. Not upstream. */
     val romanizedFontSize: Dp? = null,
 
     // -- Credits --
+    /** What stands before the songwriters' names after the last line. */
     val creditsLabel: String = "Written by",
+    /** How opaque the credits are while the song still runs. */
     val creditsOpacity: Float = 0.2f,
+    /** How opaque the credits are once the last line is sung. */
     val creditsFocusedOpacity: Float = 0.85f,
 
     // -- Layout --
@@ -78,69 +108,114 @@ public data class BraccatoTheme(
     val activeScale: Float = 1f,
 
     // -- Animations --
+    /** Which effects run. */
     val animations: BraccatoAnimations = BraccatoAnimations(),
+    /** How long a line takes to grow to [activeScale] and back. */
     val scaleTransitionMs: Double = 166.0,
+    /** The easing of a line growing as it starts. */
     val lineEnterEasing: Easing = CssEasing.Ease,
+    /** The easing of a line shrinking as it ends. */
     val lineExitEasing: Easing = CssEasing.Ease,
 
+    /** How long a line synced word takes to fade in. */
     val highlightFadeInMs: Double = 330.0,
+    /** How long a word's highlight takes to fade out after its line. */
     val highlightFadeOutMs: Double = 500.0,
+    /** The easing of the fade in. */
     val highlightFadeInEasing: Easing = CssEasing.Ease,
+    /** The easing of the fade out. */
     val highlightFadeOutEasing: Easing = CssEasing.Ease,
+    /** The easing of the swipe across a word. */
     val swipeEasing: Easing = LinearEasing,
     /** The swipe's easing as the theme wrote it, which the letter wave's planning reads. */
     val swipeEasingName: String = "linear",
+    /** Where the swipe's leading edge starts, as a share of the word's width. */
     val swipeStartFrom: Double = -0.2,
+    /** Where the swipe's trailing edge starts, as a share of the word's width. */
     val swipeEndFrom: Double = -0.1,
+    /** Where the swipe's leading edge ends, as a share of the word's width. */
     val swipeStartTo: Double = 1.4,
+    /** Where the swipe's trailing edge ends, as a share of the word's width. */
     val swipeEndTo: Double = 1.5,
+    /** The glow's radius as a word starts. */
     val glowRadiusFrom: Dp = 12.8.dp,
+    /** The glow's radius as it has died down. */
     val glowRadiusTo: Dp = 0.dp,
+    /** How long the glow takes to die down, as a multiple of the word's duration. */
     val glowDurationRatio: Double = 1.2,
+    /** The shortest the glow lasts, however short the word. */
     val glowMinDurationMs: Double = 1200.0,
+    /** The easing of the glow dying down. */
     val glowEasing: Easing = CssEasing.Ease,
 
+    /** How long the nudge of a word group lasts as it starts. */
     val wobbleDurationMs: Double = 1000.0,
     /** Peak of the wobble: `translateX(0.05em) scaleX(1.025)`. */
     val wobblePeakTranslateEm: Float = 0.05f,
+    /** How wide the group grows at the nudge's peak. */
     val wobblePeakScaleX: Float = 1.025f,
+    /** When the nudge peaks, as a share of its duration. */
     val wobblePeakOffset: Float = 0.125f,
+    /** When the nudge settles, as a share of its duration. */
     val wobbleSettleOffset: Float = 0.75f,
+    /** The easing into the nudge's peak. */
     val wobbleEasing: Easing = CssEasing.Ease,
+    /** The easing from the peak to the settle. */
     val wobblePeakEasing: Easing = CssEasing.EaseInOut,
+    /** The easing from the settle to rest. */
     val wobbleEndEasing: Easing = CssEasing.EaseOut,
 
     /** `--blyrics-letter-wave-transform: translateY(-0.05em)`. */
     val letterWaveRiseEm: Float = -0.05f,
     /** `--blyrics-letter-wave-settle: translateY(-0.02em)`. */
     val letterWaveSettleEm: Float = -0.02f,
+    /** How large a letter grows as the wave passes it. */
     val letterWaveEmphasisScale: Float = 1.11f,
+    /** How long the wave takes over one letter. */
     val letterWaveDurationMs: Double = 900.0,
+    /** The easing of a letter rising. */
     val letterWaveRiseEasing: Easing = CssEasing.EaseInOut,
+    /** The easing of a letter falling back. */
     val letterWaveFallEasing: Easing = CssEasing.EaseOut,
 
+    /** How long the instrumental note's fill takes to fade in and out. */
     val instrumentalFillFadeMs: Double = 150.0,
     /** Where the fill's surface starts and ends, as a share of the note's height from the top. */
     val instrumentalFillFrom: Float = 0.78f,
+    /** Where the fill's surface ends, as a share of the note's height from the top. */
     val instrumentalFillTo: Float = -0.04f,
+    /** The wave on the fill's surface as the break starts, as a multiple of its height. */
     val instrumentalWaveFrom: Float = 1.2f,
+    /** The wave on the fill's surface as the break ends. */
     val instrumentalWaveTo: Float = 0f,
+    /** The easing of the wave settling. */
     val instrumentalWaveEasing: Easing = CssEasing.EaseIn,
+    /** How long one swing of the wave takes. */
     val instrumentalWaveOscillationMs: Double = 1250.0,
+    /** The easing of each swing. */
     val instrumentalWaveOscillationEasing: Easing = CssEasing.EaseInOut,
 
     /** `--blyrics-lyric-scroll-timing-function`, which the per-line scroll stagger moves with. */
     val lyricScrollEasing: Easing = CubicBezierEasing(0.86f, 0f, 0.2f, 1f),
+    /** How long a translation or romanization takes to come in or go. */
     val decorationEntryMs: Double = 350.0,
+    /** The easing of a translation or romanization coming in or going. */
     val decorationEntryEasing: Easing = CubicBezierEasing(0.25f, 1f, 0.5f, 1f),
 
     /** `--blyrics-*-timing-offset`, in seconds. */
     val timingOffsets: TimingOffsets = TimingOffsets(),
 ) {
-    val activeColor: Color get() = textColor.copy(alpha = textColor.alpha * activeOpacity)
-    val inactiveColor: Color get() = textColor.copy(alpha = textColor.alpha * inactiveOpacity)
+    /** The colour of the line being sung: [lyricActiveColor], or [textColor] at [activeOpacity]. */
+    val activeColor: Color get() = lyricActiveColor ?: textColor.copy(alpha = textColor.alpha * activeOpacity)
+    /** The colour of the other lines: [lyricInactiveColor], or [textColor] at [inactiveOpacity]. */
+    val inactiveColor: Color get() = lyricInactiveColor ?: textColor.copy(alpha = textColor.alpha * inactiveOpacity)
 
-    /** The swipe as the core's letter planning reads it. */
+    /**
+     * The swipe as the core's letter planning reads it.
+     *
+     * @suppress Internal to the braccato modules.
+     */
+    @InternalBraccatoApi
     val swipeRamp: SwipeRamp
         get() = SwipeRamp(
             easing = swipeEasingName,
@@ -156,7 +231,9 @@ public data class BraccatoTheme(
     /** `--blyrics-target-scroll-pos-ratio`, which upstream reads as a theme setting. */
     val targetScrollRatio: Double get() = CoreSettings.SCROLL_POS_OFFSET_RATIO.getNumberValue()
 
+    /** The default theme and the way to a Better Lyrics one. */
     public companion object {
+        /** Upstream's look, unchanged. */
         public val Default: BraccatoTheme = BraccatoTheme()
 
         /**
@@ -186,6 +263,8 @@ public data class BraccatoTheme(
         fun flag(name: String) = prop("animate-$name")?.let(::parseCssNumber)?.let { it != 0.0 }
 
         color("text-color") { t.copy(textColor = it) }
+        color("lyric-active-color") { t.copy(lyricActiveColor = it) }
+        color("lyric-inactive-color") { t.copy(lyricInactiveColor = it) }
         color("highlight-color") { t.copy(glowColor = it) }
         color("glow-color") { t.copy(glowColor = it) }
         color("translated-color") { t.copy(translatedColor = it) }

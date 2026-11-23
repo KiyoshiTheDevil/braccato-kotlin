@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.kmp.library)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose)
+    alias(libs.plugins.dokka)
 }
 
 // The renderer `@braccato/core` builds as DOM, drawn with Compose instead.
@@ -36,6 +37,17 @@ kotlin {
             implementation(kotlin("test"))
             implementation(compose.desktop.currentOs)
             implementation(project(":braccato-parsers"))
+        }
+    }
+}
+
+dokka {
+    dokkaSourceSets.configureEach {
+        // Every public declaration is documented; the build says which one is not.
+        reportUndocumented.set(true)
+        sourceLink {
+            localDirectory.set(projectDir.resolve("src"))
+            remoteUrl("https://github.com/KiyoshiTheDevil/braccato-kotlin/tree/main/braccato-compose/src")
         }
     }
 }

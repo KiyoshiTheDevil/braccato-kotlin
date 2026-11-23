@@ -4,8 +4,21 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.compose) apply false
     alias(libs.plugins.android.kmp.library) apply false
+    alias(libs.plugins.dokka)
 }
 
 subprojects {
     group = "braccato"
+}
+
+// The API reference for all four modules in one site: ./gradlew dokkaGenerate, then build/dokka/html.
+dependencies {
+    dokka(project(":braccato-types"))
+    dokka(project(":braccato-parsers"))
+    dokka(project(":braccato-core"))
+    dokka(project(":braccato-compose"))
+}
+
+dokka {
+    moduleName.set("braccato-kotlin")
 }

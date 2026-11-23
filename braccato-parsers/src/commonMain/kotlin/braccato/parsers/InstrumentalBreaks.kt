@@ -5,8 +5,12 @@ import braccato.types.Lyric
 
 private const val DEFAULT_INSTRUMENTAL_GAP_MS = 5000.0
 
+/**
+ * How instrumental lines are added between sung ones.
+ *
+ * @property instrumentalGapMs Silence longer than this, in milliseconds, becomes an instrumental line. Null means 5000.
+ */
 public data class InstrumentalBreakOptions(
-    /** Silence longer than this becomes an instrumental line. Defaults to 5000. */
     val instrumentalGapMs: Double? = null,
 )
 

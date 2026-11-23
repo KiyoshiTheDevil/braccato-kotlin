@@ -79,6 +79,9 @@ internal fun highlightAt(theme: BraccatoTheme, word: BuiltWord, effectiveEnd: Do
     if (t < word.time || word.time >= effectiveEnd) return HighlightState.Hidden
     val litStart = theme.swipeStartTo.toFloat()
     val litEnd = theme.swipeEndTo.toFloat()
+    // Where the glow rests once it has died down, as a share of its start: upstream's `glowTo`, held
+    // after the shrink and through the fade out, and nothing at all with the glow off (1.21.6).
+    val restingGlow = if (theme.animations.highlightGlow) theme.glowRadiusTo.value / theme.glowRadiusFrom.value.coerceAtLeast(0.001f) else 0f
 
     if (t >= effectiveEnd) {
         val fade = if (theme.animations.highlightFade) {
@@ -86,7 +89,7 @@ internal fun highlightAt(theme: BraccatoTheme, word: BuiltWord, effectiveEnd: Do
         } else {
             progress((t - effectiveEnd) * 1000, 1.0)
         }
-        return HighlightState(opacity = 1f - fade, start = litStart, end = litEnd, glow = 0f)
+        return HighlightState(opacity = 1f - fade, start = litStart, end = litEnd, glow = restingGlow)
     }
 
     val timing = planWordHighlight(word.time, word.duration, t)
@@ -100,7 +103,7 @@ internal fun highlightAt(theme: BraccatoTheme, word: BuiltWord, effectiveEnd: Do
         val radius = lerp(1f, theme.glowRadiusTo.value / theme.glowRadiusFrom.value.coerceAtLeast(0.001f), theme.glowEasing.transform(glowProgress.toFloat().coerceIn(0f, 1f)))
         radius
     } else {
-        0f
+        restingGlow
     }
 
     if (word.isLineSynced) {

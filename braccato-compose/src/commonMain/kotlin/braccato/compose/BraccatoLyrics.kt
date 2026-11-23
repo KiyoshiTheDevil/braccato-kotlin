@@ -73,7 +73,9 @@ import kotlin.time.TimeSource
 public data class PlaybackSnapshot(
     /** Seconds into the song. */
     val timeS: Double,
+    /** Whether the song is playing. */
     val isPlaying: Boolean,
+    /** How fast it plays, 1 for normal speed. */
     val playbackRate: Double = 1.0,
     /**
      * When the time was read, on the view's wall clock, in milliseconds. Given, the view extrapolates
@@ -98,6 +100,7 @@ public class BraccatoLyricsState {
     }
 }
 
+/** A [BraccatoLyricsState] that lives as long as the composition. */
 @Composable
 public fun rememberBraccatoLyricsState(): BraccatoLyricsState = remember { BraccatoLyricsState() }
 

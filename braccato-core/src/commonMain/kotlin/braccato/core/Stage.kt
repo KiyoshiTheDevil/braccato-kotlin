@@ -8,11 +8,18 @@ package braccato.core
 import kotlin.math.max
 import kotlin.math.min
 
+/** What stands on the stage: a sung line, a pause, an instrumental break, or the credits. */
 public enum class StageItemKind { LINE, BLANK, INSTRUMENTAL, CREDITS }
 
+/**
+ * Where an item is at a time: being sung ([CURRENT]), the line before it while the two overlap
+ * ([PREVIOUS]), still to come ([QUEUED]) or done ([GONE]).
+ */
 public enum class StageRole { CURRENT, PREVIOUS, QUEUED, GONE }
 
+/** One item of the stage, with its time. */
 public data class StageItem(
+    /** What it is. */
     val kind: StageItemKind,
     /** Seconds. */
     val start: Double,
@@ -45,6 +52,7 @@ internal fun stageEnterTimes(items: List<StageItem>): List<Double> {
     }
 }
 
+/** Each item's [StageRole] at [timeS], in seconds of lyric time. */
 public fun planStage(items: List<StageItem>, timeS: Double): List<StageRole> {
     val enterTimes = stageEnterTimes(items)
     var current = -1
@@ -63,29 +71,45 @@ public fun planStage(items: List<StageItem>, timeS: Double): List<StageRole> {
     return roles
 }
 
+/** One item's measured size, in pixels. */
 public data class StageMetrics(
+    /** Its height. */
     val height: Double,
+    /** Where its text starts, from the stage's left edge. */
     val left: Double,
+    /** Its text's width. */
     val width: Double,
     /** Where the item scales from horizontally: 0 left, 0.5 centre, 1 right. */
     val originX: Double,
 )
 
+/** The stage's own measures. */
 public data class StageGeometry(
+    /** The stage's height, in pixels. */
     val stageHeight: Double,
+    /** The space between two lines on stage, in pixels. */
     val gap: Double,
+    /** How much larger the sung line is drawn, 1 for not at all. */
     val activeScale: Double,
 )
 
+/** Where [layoutStage] puts an item. */
 public data class StagePlacement(
+    /** Its top, in pixels from the stage's top. */
     val y: Double,
+    /** Whether it shows. */
     val visible: Boolean,
 )
 
+/** A rectangle on the stage, in pixels: where the sung text is, for a backdrop behind it. */
 public data class StageBox(
+    /** Its left edge. */
     val x: Double,
+    /** Its top edge. */
     val y: Double,
+    /** Its width. */
     val width: Double,
+    /** Its height. */
     val height: Double,
 )
 
@@ -156,8 +180,20 @@ internal fun queuedStageY(stageHeight: Double, height: Double, gap: Double): Dou
     return stageHeight - height + gap
 }
 
+/**
+ * What [layoutStage] decides.
+ *
+ * @property placements Each item's place, in the order of the items.
+ * @property box Around the text being sung, or null when nothing sung is on stage.
+ */
 public data class StageLayout(val placements: List<StagePlacement>, val box: StageBox?)
 
+/**
+ * Places the stage's items for their [roles], as [planStage] gave them.
+ *
+ * @param metrics Each item's measured size.
+ * @param previousY Each item's last place, which a line that is done keeps while it fades.
+ */
 public fun layoutStage(
     roles: List<StageRole>,
     items: List<StageItem>,

@@ -4,7 +4,11 @@ package braccato.core
 
 import braccato.types.internal.InternalBraccatoApi
 
-/** The surface of the fill inside the note, at the top of its ripple. SVG path data, 24 by 24 box. */
+/**
+ * The surface of the fill inside the note, at the top of its ripple. SVG path data, 24 by 24 box.
+ *
+ * @suppress Internal to the braccato modules.
+ */
 @InternalBraccatoApi public const val INSTRUMENTAL_WAVE_PATH_HIGH: String = "M -4 3 Q 1 2 5 3 Q 10 4 14 3 Q 18 2 22 3 Q 26 4 30 3 L 30 4 L -4 4 Z"
 
 /** The same surface at the bottom of its ripple. Same commands as the high one, so the two morph. */

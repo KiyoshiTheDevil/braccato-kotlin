@@ -58,7 +58,10 @@ internal fun smoothedPlaybackTime(
 
 /** One word's timing, in seconds, as `updateWordStates` reads it. */
 public interface TimedPart {
+    /** When it starts, in seconds of lyric time. */
     public val time: Double
+
+    /** How long it lasts, in seconds. */
     public val duration: Double
 }
 
@@ -83,6 +86,8 @@ internal fun wordStatesAt(parts: List<TimedPart>, lineTime: Double, lineDuration
 /**
  * When a word's highlight runs, from `startWordAnimations`. The swipe runs ahead of the word by a share
  * of its duration and lasts longer than it, both set by the theme.
+ *
+ * @suppress Internal to the braccato modules.
  */
 @InternalBraccatoApi public data class WordHighlightTiming(
     /** How far into the word the time is, in milliseconds. Negative before it starts. */
@@ -93,6 +98,7 @@ internal fun wordStatesAt(parts: List<TimedPart>, lineTime: Double, lineDuration
     val swipeDurationMs: Double,
 )
 
+/** @suppress Internal to the braccato modules. */
 @InternalBraccatoApi public fun planWordHighlight(partTime: Double, partDuration: Double, currentTime: Double): WordHighlightTiming {
     val rawElapsedMs = (currentTime - partTime) * 1000
     // Providers do ship words that end before they start, so a negative duration counts as none.
@@ -118,6 +124,8 @@ internal data class LetterSwipeWindow(
 /**
  * The swipe, as a theme states it: an easing, and where the gradient's two edges run from and to, as
  * a share of the word. The values are the CSS strings the theme wrote.
+ *
+ * @suppress Internal to the braccato modules.
  */
 @InternalBraccatoApi public data class SwipeRamp(
     val easing: String,
@@ -212,8 +220,10 @@ internal fun planLetterMaskSweep(swipe: SwipeRamp, letterCount: Int, swipeDurati
 }
 
 // How far through its float a letter crests, as a keyframe offset.
+/** @suppress Internal to the braccato modules. */
 @InternalBraccatoApi public const val LETTER_WAVE_CREST_OFFSET: Double = 0.4
 
+/** @suppress Internal to the braccato modules. */
 @InternalBraccatoApi public data class LetterWaveTiming(
     val delayMs: Double,
     val durationMs: Double,
@@ -223,6 +233,7 @@ internal fun planLetterMaskSweep(swipe: SwipeRamp, letterCount: Int, swipeDurati
 // crests just as the swipe finishes lighting it. If the swipe lights it faster than the float rises,
 // it starts early enough to make that, which on a short word means before the word itself does. If the
 // swipe lights it slower, it starts as the swipe touches it and its float stretches to crest on time.
+/** @suppress Internal to the braccato modules. */
 @InternalBraccatoApi public fun planLetterWave(
     swipe: SwipeRamp,
     letterCount: Int,
@@ -286,6 +297,12 @@ internal fun parseColorAlpha(value: String): Double? {
 
 // -- Visible scroll band --------------------------
 
+/**
+ * Space at the top and bottom of the view the lines should keep clear of, as a theme sets it. Pixels.
+ *
+ * @property top Space kept clear at the top.
+ * @property bottom Space kept clear at the bottom.
+ */
 public data class ScrollInsets(
     val top: Double,
     val bottom: Double,
@@ -368,6 +385,8 @@ internal fun computeActiveLinesScrollTop(
  * Fills in everything a caller left out of a tick. The tick reads each of these arithmetically, so
  * a missing one would not fail: it would quietly turn the playback time into NaN and leave the view
  * matching no line at all.
+ *
+ * @suppress Internal to the braccato modules.
  */
 @InternalBraccatoApi public fun resolveTickOptions(options: TickOptions): ResolvedTickOptions {
     return ResolvedTickOptions(
@@ -380,6 +399,7 @@ internal fun computeActiveLinesScrollTop(
         lineOffsetTrim = options.lineOffsetTrim ?: 0.0,
         passiveScrollEnabled = options.passiveScrollEnabled ?: false,
         playbackRate = resolvePlaybackRate(options.playbackRate),
+        followPausedSeeks = options.followPausedSeeks ?: false,
     )
 }
 
@@ -395,6 +415,8 @@ private fun resolvePlaybackRate(rate: Double?): Double {
  * What a view has to know to size its scroll padding. Split out from the measurements so the
  * arithmetic can be checked against the degenerate cases, which is where it went wrong: an
  * unrendered container answers zero to every measurement.
+ *
+ * @suppress Internal to the braccato modules.
  */
 @InternalBraccatoApi public data class ScrollPaddingMeasurements(
     val viewportHeight: Double,
@@ -408,6 +430,7 @@ private fun resolvePlaybackRate(rate: Double?): Double {
     val footerHeight: Double,
 )
 
+/** @suppress Internal to the braccato modules. */
 @InternalBraccatoApi public data class ScrollPadding(val top: Double, val bottom: Double)
 
 /**
@@ -448,6 +471,8 @@ private fun resolvePlaybackRate(rate: Double?): Double {
 /**
  * `getTargetScrollRatio`: a ratio the view itself was given wins, clamped to the viewport, and the
  * theme setting stands in for it otherwise.
+ *
+ * @suppress Internal to the braccato modules.
  */
 @InternalBraccatoApi public fun targetScrollRatio(scoped: Double? = null): Double {
     return if (scoped != null && scoped.isFinite()) max(0.0, min(1.0, scoped))

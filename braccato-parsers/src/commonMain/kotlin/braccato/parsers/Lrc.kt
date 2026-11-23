@@ -221,7 +221,13 @@ public fun parseLRC(
     return insertInstrumentalBreaks(sung, songDurationMs, options.instrumentalGapMs)
 }
 
-@InternalBraccatoApi public fun lrcFixers(lyrics: List<Lyric>) {
+/**
+ * Evens out the word timing of enhanced LRC in place, as Kugou's and Musixmatch's need: a space timed
+ * like the word before it gives its time to that word, and when most words last 100 ms or less, each
+ * short word is held until the next one starts (no longer than its line). [LRCParser] runs it after
+ * [parseLRC]; call it yourself only for such sources, since clean timings would be changed too.
+ */
+public fun lrcFixers(lyrics: List<Lyric>) {
     for (lyric in lyrics) {
         val parts = lyric.parts ?: continue
         for (i in 1 until parts.size) {
@@ -293,6 +299,7 @@ public fun parseLRC(
     }
 }
 
+/** The [LyricParser] for LRC, plain and enhanced. It cleans up the timing after [parseLRC]; see there. */
 public object LRCParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isLrc(input)

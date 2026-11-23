@@ -77,7 +77,9 @@ class TimelineTest {
 
         val paused = TickOptions(isPlaying = false)
         timeline.tick(29.8, paused, 0.0)
-        assertTrue(timeline.tick(29.9, paused, 0.0).clock!!.pausedSeek, "a paused clock that moves was scrubbed")
+        assertFalse(timeline.tick(29.9, paused, 0.0).clock!!.pausedSeek, "a paused scrub moves nothing unless the host asks (1.18.0)")
+        val following = TickOptions(isPlaying = false, followPausedSeeks = true)
+        assertTrue(timeline.tick(30.0, following, 0.0).clock!!.pausedSeek, "a paused clock that moves was scrubbed, for a host that follows")
     }
 
     @Test fun `extrapolates a player snapshot to now`() {

@@ -124,6 +124,11 @@ private fun parseLyricPart(paragraph: List<XmlNode>, beginTime: Double): LyricPa
     val text = StringBuilder()
     var parts = mutableListOf<LyricPart>()
     var isWordSynced = false
+    var backgroundGroups = 0
+    val isTimedText = { span: XmlNode -> !span.attr("begin").isNullOrEmpty() && collectSpanText(span.childrenOf("span") ?: emptyList()) != "" }
+    val lineHasTimedSpans = paragraph.any { element ->
+        if (element.attr("role") == "x-bg") (element.childrenOf("span") ?: emptyList()).any(isTimedText) else isTimedText(element)
+    }
 
     for (element in paragraph) {
         var isBackground = false
@@ -133,15 +138,13 @@ private fun parseLyricPart(paragraph: List<XmlNode>, beginTime: Double): LyricPa
             // traverse one span in. This is a bg lyric
             isBackground = true
             localP = element.childrenOf("span") ?: emptyList()
-            // Not upstream: two background spans side by side are two calls, and with nothing between
-            // them their words ran into one ("ベイビー" + "Uh-ha" = "ベイビーUh-ha", IRIS OUT on Spicy
-            // Lyrics, 2026-11-07). A space keeps them apart, as one between their spans would.
-            val last = parts.lastOrNull()
-            if (last != null && last.isBackground == true && !last.words.endsWith(" ")) {
-                parts += LyricPart(startTimeMs = last.startTimeMs + last.durationMs, durationMs = 0.0, words = " ", isBackground = true)
-                text.append(" ")
-            }
+            val timedInside = localP.any { child -> !child.attr("begin").isNullOrEmpty() }
+            // Timing on the x-bg span itself means the same as timing on one span inside it, in a line that is timed by word.
+            val isTimedItself = !element.attr("begin").isNullOrEmpty() && !element.attr("end").isNullOrEmpty()
+            if (lineHasTimedSpans && isTimedItself && !timedInside) localP = listOf(element)
         }
+        val group = if (isBackground) backgroundGroups else null
+        val partsBefore = parts.size
 
         for (subPart in localP) {
             val subPartSpan = subPart.childrenOf("span")
@@ -154,6 +157,7 @@ private fun parseLyricPart(paragraph: List<XmlNode>, beginTime: Double): LyricPa
                     durationMs = 0.0,
                     words = subPart.text,
                     isBackground = isBackground,
+                    backgroundGroup = group,
                 )
             } else if (subPartSpan != null) {
                 val spanText = collectSpanText(subPartSpan)
@@ -167,6 +171,7 @@ private fun parseLyricPart(paragraph: List<XmlNode>, beginTime: Double): LyricPa
                     startTimeMs = startTimeMs,
                     durationMs = endTimeMs - startTimeMs,
                     isBackground = isBackground,
+                    backgroundGroup = group,
                     words = spanText,
                     explicit = explicit,
                 )
@@ -175,6 +180,7 @@ private fun parseLyricPart(paragraph: List<XmlNode>, beginTime: Double): LyricPa
                 isWordSynced = true
             }
         }
+        if (isBackground && parts.size > partsBefore) backgroundGroups++
     }
 
     if (!isWordSynced) {
@@ -221,13 +227,24 @@ private fun declareMissingNamespaces(content: String): String {
 
 // -- Parser --------------------------------------------
 
+/**
+ * Options for [parseTTMLContent].
+ *
+ * @property songDurationMs The song's length in milliseconds, for the outro instrumental when the document's `<body>` carries no `dur`.
+ * @property instrumentalGapMs Silence longer than this, in milliseconds, becomes an instrumental line. Null means 5000.
+ */
 public data class ParseTTMLOptions(
-    /** Used for the outro instrumental when the document's `<body>` carries no `dur`. */
     val songDurationMs: Double? = null,
-    /** Silence longer than this becomes an instrumental line. Defaults to 5000. */
     val instrumentalGapMs: Double? = null,
 )
 
+/**
+ * What [parseTTMLContent] reads from a TTML document.
+ *
+ * @property lyrics The lines, with instrumental lines in the gaps.
+ * @property isWordSynced Whether the document times words or syllables, not only lines.
+ * @property language The document's language (`xml:lang`), when it gives one.
+ */
 public data class ParsedTTML(
     val lyrics: List<Lyric>,
     val isWordSynced: Boolean,
@@ -298,6 +315,11 @@ private fun readSongwriters(metadataElements: List<XmlNode>): List<String> {
 
 private fun String?.orIfEmpty(fallback: String?): String? = if (isNullOrEmpty()) fallback else this
 
+/**
+ * Parses a TTML document (Apple Music's, and the community formats built on it): lines, word or syllable
+ * timing, background vocals, singers, translations and romanizations. [TTMLParser] calls this with the
+ * default options; call it directly for the song's duration or another gap threshold.
+ */
 public fun parseTTMLContent(xml: String, options: ParseTTMLOptions = ParseTTMLOptions()): ParsedTTML {
     val ttContainer = readTtmlRoot(xml) ?: return ParsedTTML(lyrics = emptyList(), isWordSynced = false)
 
@@ -431,6 +453,7 @@ public fun parseTTMLContent(xml: String, options: ParseTTMLOptions = ParseTTMLOp
     return ParsedTTML(lyrics = lyricArray, isWordSynced = isWordSynced, language = language)
 }
 
+/** The [LyricParser] for TTML, see [parseTTMLContent]. */
 public object TTMLParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isTtml(input)

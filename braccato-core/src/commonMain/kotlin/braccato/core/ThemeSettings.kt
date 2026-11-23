@@ -23,12 +23,20 @@ private val keyToSettingMap: MutableMap<String, Setting> = LinkedHashMap()
 
 // -- Setting --------------------------------------------
 
+/** What a [Setting] holds: a `Double`, a `Boolean` or a `String`. */
 public enum class SettingType { NUMBER, BOOLEAN, STRING }
 
+/**
+ * One theme setting, as [CoreSettings] lists them. Its value is shared by every view in the process, as
+ * upstream's is.
+ */
 public class Setting internal constructor(
+    /** What the value is. */
     public val type: SettingType,
     value: Any,
+    /** The value when no theme sets one. */
     public val defaultValue: Any,
+    /** Whether lyrics already built must be built again for a change to show. */
     public val requiresLyricReload: Boolean,
 ) {
     /** A `Double`, `Boolean` or `String`, matching [type]. */
@@ -36,14 +44,19 @@ public class Setting internal constructor(
         internal set
     private var manuallySet = false
 
+    /** The value of a [SettingType.NUMBER] setting. */
     public fun getNumberValue(): Double = value as Double
 
+    /** The value of a [SettingType.BOOLEAN] setting. */
     public fun getBooleanValue(): Boolean = value as Boolean
 
+    /** The value of a [SettingType.STRING] setting. */
     public fun getStringValue(): String = value as String
 
+    /** Whether the host set the value itself, rather than a theme; a theme then leaves it alone. */
     public fun isManuallySet(): Boolean = manuallySet
 
+    /** Marks the value as the host's own, see [isManuallySet]. */
     public fun setManuallySet(manuallySet: Boolean) {
         this.manuallySet = manuallySet
     }
@@ -95,7 +108,12 @@ internal fun registerThemeSetting(key: String, defaultValue: Boolean, requiresLy
 internal fun registerThemeSetting(key: String, defaultValue: String, requiresLyricReload: Boolean = false): Setting =
     register(key, SettingType.STRING, defaultValue, requiresLyricReload)
 
-// Returns whether a setting flagged requiresLyricReload changed, so the caller can reload.
+/**
+ * Applies a theme's `blyrics-*` settings, as [parseThemeConfig] reads them; settings it leaves out go back
+ * to their defaults, and those the host set itself stay.
+ *
+ * @return Whether a setting that [Setting.requiresLyricReload] changed, so the lyrics should be built again.
+ */
 public fun setThemeSettings(map: Map<String, String>): Boolean {
     CoreSettings.ensureRegistered()
     var needsLyricReload = false

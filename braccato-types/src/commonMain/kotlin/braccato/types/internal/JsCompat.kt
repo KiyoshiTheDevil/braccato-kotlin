@@ -9,12 +9,20 @@ package braccato.types.internal
 
 import kotlin.math.floor
 
+/**
+ * Marks what the braccato modules share among themselves and nobody else should use: it may change
+ * or go without notice. Using it takes an opt-in.
+ */
 @RequiresOptIn("Internal to the braccato modules; it may change without notice.")
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY, AnnotationTarget.CLASS, AnnotationTarget.TYPEALIAS, AnnotationTarget.CONSTRUCTOR)
 public annotation class InternalBraccatoApi
 
-/** JavaScript's WhiteSpace and LineTerminator characters, as the body of a regex character class. */
+/**
+ * JavaScript's WhiteSpace and LineTerminator characters, as the body of a regex character class.
+ *
+ * @suppress Internal to the braccato modules.
+ */
 @InternalBraccatoApi
 public const val JS_WHITESPACE: String = "\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF"
 
@@ -22,6 +30,7 @@ public const val JS_WHITESPACE: String = "\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2
 @InternalBraccatoApi
 public const val WS: String = "[$JS_WHITESPACE]"
 
+/** @suppress Internal to the braccato modules. */
 @InternalBraccatoApi
 public fun isJsWhitespace(c: Char): Boolean = when (c) {
     '\t', '\n', '\u000B', '\u000C', '\r', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '　', '﻿' -> true
@@ -63,7 +72,11 @@ public fun String.jsSplit(regex: Regex): List<String> {
     return out
 }
 
-/** `Math.round`: halves go up, and NaN and the infinities pass through. */
+/**
+ * `Math.round`: halves go up, and NaN and the infinities pass through.
+ *
+ * @suppress Internal to the braccato modules.
+ */
 @InternalBraccatoApi
 public fun jsRound(value: Double): Double {
     if (value.isNaN() || value.isInfinite()) return value
@@ -120,7 +133,11 @@ public fun jsNumber(input: String): Double {
     return jsParseInt(digits, radix)
 }
 
-/** `String.fromCodePoint` for one code point. */
+/**
+ * `String.fromCodePoint` for one code point.
+ *
+ * @suppress Internal to the braccato modules.
+ */
 @InternalBraccatoApi
 public fun codePointToString(codePoint: Int): String {
     if (codePoint < 0x10000) return codePoint.toChar().toString()

@@ -10,6 +10,7 @@ import braccato.types.Lyric
 import braccato.types.LyricSyncType
 import braccato.types.internal.jsTrim
 
+/** What [buildLyrics] needs to know beside the lyrics themselves. */
 public data class SetLyricsOptions(
     /** BCP 47 language of the original lyrics. Kana/Hangul provide a fallback when omitted. */
     val language: String? = null,
@@ -21,16 +22,19 @@ public data class SetLyricsOptions(
 
 /** One line as the renderer draws it: upstream's `LineData` and the element built for it. Times in seconds. */
 public class BuiltLine(
+    /** The line's place in [BuiltLyrics.lines]. */
     public val index: Int,
     /** The lyric the line was built from, untouched. */
     public val lyric: Lyric,
     override val time: Double,
     override val duration: Double,
+    /** Whether the line stands for a break without singing. */
     public val isInstrumental: Boolean,
     /** A sung line with no words, which marks a pause. */
     public val isBlank: Boolean,
     /** `v1` lead, `v2`/`v3` the other side, `v1000` the group. An instrumental takes its neighbours'. */
     public val agent: String?,
+    /** Which way the line reads. */
     public val direction: TextDirection,
     /** The line's language, "" where it cannot be told. */
     public val language: String,
@@ -41,11 +45,15 @@ public class BuiltLine(
     public val words: List<BuiltWord> get() = content?.words ?: emptyList()
 }
 
+/** A song's lyrics as a renderer draws them, from [buildLyrics]. */
 public class BuiltLyrics(
+    /** The lines, instrumental breaks among them, in order. */
     public val lines: List<BuiltLine>,
+    /** How finely the lyrics are timed. */
     public val syncType: LyricSyncType,
     /** Every line starts at zero: there is no time to seek to, and clicking a line does nothing. */
     public val allZero: Boolean,
+    /** The lyrics are a "not found" placeholder, see [SetLyricsOptions.noLyrics]. */
     public val noLyrics: Boolean,
     /** The credits line after the last lyric, or null when there is none to show. */
     public val credits: String?,

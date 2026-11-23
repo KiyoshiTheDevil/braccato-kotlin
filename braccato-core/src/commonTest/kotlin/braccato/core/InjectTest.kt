@@ -62,11 +62,34 @@ class LineBuildTest {
 
         assertEquals(listOf("Hello", "indistinguishable", "world"), content.words.map { it.text })
         assertEquals("Hello indistinguishable ", content.main.text)
-        assertEquals("world", content.background?.text)
+        assertEquals(listOf("world"), content.backgrounds.map { it.text })
         assertEquals(listOf("Hello", " ", "indistinguishable"), content.main.items.map { (it as? LineItem.Group)?.text ?: (it as LineItem.Space).text })
         assertEquals(listOf("indistingu", "ishable"), content.words[1].wrapChunks, "a word past the wrap threshold has its break points")
         assertNull(content.words[0].wrapChunks, "a short word has none")
         assertTrue(content.words.all { it.letters == null }, "letter wave off leaves words unlettered")
+    }
+
+    @Test fun `gives each background group a row of its own, in the order they are numbered`() {
+        val grouped = listOf(
+            LyricPart(startTimeMs = 0.0, words = "Lead ", durationMs = 500.0),
+            LyricPart(startTimeMs = 500.0, words = "(two)", durationMs = 300.0, isBackground = true, backgroundGroup = 1),
+            LyricPart(startTimeMs = 800.0, words = "(one)", durationMs = 300.0, isBackground = true, backgroundGroup = 0),
+        )
+        val content = createLyricsLine(grouped)
+
+        assertEquals("Lead ", content.main.text)
+        assertEquals(listOf("(one)", "(two)"), content.backgrounds.map { it.text })
+    }
+
+    @Test fun `keeps the background groups together where the background is not split off`() {
+        val grouped = listOf(
+            LyricPart(startTimeMs = 0.0, words = "(one)", durationMs = 300.0, isBackground = true, backgroundGroup = 0),
+            LyricPart(startTimeMs = 300.0, words = "(two)", durationMs = 300.0, isBackground = true, backgroundGroup = 1),
+        )
+        val content = createLyricsLine(grouped, splitBackgroundLine = false)
+
+        assertEquals(emptyList<ContentLine>(), content.backgrounds)
+        assertEquals(1, content.main.items.size, "one word group, as before groups were numbered")
     }
 
     @Test fun `splits a part into words with its time pro-rated by characters`() {

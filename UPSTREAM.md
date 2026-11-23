@@ -8,10 +8,12 @@ file for file so upstream changes can be carried over as diffs.
 | | |
 |---|---|
 | Repository | https://github.com/better-lyrics/braccato |
-| Commit | `5740449a708d0065e85caeff32140950b3f5ea7d` (2026-10-30, `chore: version packages`) |
-| `@braccato/types` | 1.0.0 → `braccato-types` |
-| `@braccato/parsers` | 0.4.0 → `braccato-parsers` |
-| `@braccato/core` | 1.17.1 → `braccato-core`, the part that is not the DOM |
+| Commit | `b5b9571e7d8a8d72f705a38e18c285175c30b3ed` (2026-11-20, `chore: version packages`) |
+| `@braccato/types` | 1.1.0 → `braccato-types` |
+| `@braccato/parsers` | 0.4.3 → `braccato-parsers` |
+| `@braccato/core` | 1.22.0 → `braccato-core`, the part that is not the DOM |
+
+First ported at `5740449` (core 1.17.1); brought up to `b5b9571` on 2026-11-23, see [the last sync](#the-sync-to-1220).
 
 ## File map
 
@@ -44,18 +46,20 @@ public only to the braccato modules, behind the `InternalBraccatoApi` opt-in.
 
 ### `@braccato/core`
 
-Upstream's core is a DOM renderer: about two thirds of `engine.ts` starts Web Animations from CSS
-keyframes, reads layout and corrects the browser's animation clock against the song. That has no
+Upstream's core is a DOM renderer: most of its engine (`engine.ts` until 1.20.1, since then split into
+`engine/*.ts`, one module per concern) starts Web Animations from CSS keyframes, reads layout and
+corrects the browser's animation clock against the song. That has no
 counterpart under Compose, where a frame is drawn from the time directly. What is ported is
 everything the renderer decides from numbers, under upstream's names where a function exists.
 
 | Upstream | Kotlin (`braccato-core/…/core/`) |
 |---|---|
-| `engine.ts`, the arithmetic | `Engine.kt`: clock smoothing, word states, swipe windows, letter mask sweep, letter wave, glow alpha, scroll insets and target, scroll padding, tick options, passive scroll |
-| `engine.ts`, `tickView`'s decisions | `Timeline.kt` (new shape, see below) |
+| `engine/` arithmetic: `clock.ts`, `sweepPlans.ts`, `letterPlans.ts`, `glow.ts`, `scrollViewport.ts`, `passiveScroll.ts`, `tick.ts` (tick options) | `Engine.kt`: clock smoothing, word states, swipe windows, letter mask sweep, letter wave, glow alpha, scroll insets and target, scroll padding, tick options, passive scroll |
+| `engine/tick.ts`, `autoScroll.ts`, `userScroll.ts`, `clock.ts`: the per-frame decisions | `Timeline.kt` (new shape, see below) |
 | `engine.ts`, `inject.ts`, `imageHighlights.ts`: `registerThemeSetting` calls | `CoreSettings.kt` |
 | `themeSettings.ts` | `ThemeSettings.kt` |
-| `inject.ts` | `Inject.kt`: tokens, word groups, lettering, wrap points, line synced parts, sync type, direction, translation and romanization |
+| `inject.ts` | `Inject.kt`: tokens, word groups, background groups, lettering, wrap points, line synced parts, sync type, direction, translation and romanization |
+| `letters.ts` | `Letters.kt`: `letterClusters`, `joinLetterSegments` |
 | `view.ts` | `View.kt`: `buildLyrics`, credits, stage duet |
 | `stage.ts` | `Stage.kt` |
 | `language.ts` | `Language.kt` |
@@ -171,6 +175,33 @@ Differences in the renderer:
 - **Letters are split with `BreakIterator`**, upstream with `Intl.Segmenter`. Both follow the
   extended grapheme cluster rules.
 
+## The sync to 1.22.0
+
+From core 1.17.1 to 1.22.0, parsers 0.4.0 to 0.4.3, types 1.0.0 to 1.1.0. Carried over:
+
+- **Background groups** (types 1.1.0, parsers 0.4.1, core 1.20.0): `LyricPart.backgroundGroup`, the
+  TTML parser numbering each `x-bg` span and reading timing written on the span itself, and a row for
+  each group (`LineContent.backgrounds`, drawn one under the other). It replaces this port's own fix for
+  two background spans side by side, which put a space between them.
+- **`followPausedSeeks`** (1.18.0): a paused clock moving by less than a jump resets the highlight only
+  when the host asks.
+- **Letter clusters** (1.21.3): conjuncts and spacing vowel signs stay whole in the letter wave and in
+  wraps, and the long word thresholds count letters, not UTF-16 units.
+- **The glow at rest** (1.21.6): it holds `glowTo` once it has died down and through the fade out, and
+  nothing with the glow off.
+- Found on the way, older than 1.17.1: `--blyrics-lyric-active-color` and `--blyrics-lyric-inactive-color`
+  are read now (`BraccatoTheme.lyricActiveColor`, `lyricInactiveColor`).
+
+Not carried over, because they answer browser questions:
+
+- `countEveryUserScroll` (1.19.0) and the reader pausing unsynced drift (1.19.1). Both are about telling
+  the reader's scroll events from the ones the engine's own writes fire (`skipScrolls`); a Compose host
+  reports the reader's scroll itself (`noteUserScroll`), so every one counts already.
+- The sweep, glow and line scrolls run off the main thread (1.21.0, 1.21.2, 1.21.5): a compositor matter.
+  The two-halo glow of 1.21.0 went back to one drop shadow in 1.21.6, which is what this port draws.
+- WebKit's baseline drift in wrapped sweeps (1.22.0), the engine's split into modules (1.20.1), and
+  `TTMLParser.metadata` reusing the last parse (0.4.2), which only saves work.
+
 ## Checking against the JavaScript parsers
 
 `tools/upstream-compare` runs the published `@braccato/parsers` over a folder of lyric files, and
@@ -185,12 +216,12 @@ cd tools/upstream-compare && npm install && node dump.mjs <lyrics folder> <outpu
 BRACCATO_COMPARE_CORPUS=<lyrics folder> BRACCATO_COMPARE_EXPECTED=<output folder> ./gradlew :braccato-parsers:jvmTest
 ```
 
-As of this commit: 56 of 56 real-world files (34 LRC, 22 TTML) match, along with 11 hand-made edge cases
+Last run against parsers 0.4.0, before the sync to 0.4.3, and not run again since: 56 of 56 real-world files (34 LRC, 22 TTML) match, along with 11 hand-made edge cases
 (entities, CDATA, BOM and CRLF, nesting at the depth limit, broken QRC and SRT).
 
 ## Carrying over an upstream change
 
 1. `git diff <commit above>..<new commit> -- packages/types packages/parsers packages/core` in the upstream repository.
 2. Apply each hunk to the Kotlin file the map above names, then port any new or changed tests.
-3. Bump `version` in the module's `build.gradle.kts` and the version in `tools/upstream-compare/package.json`.
+3. Bump the version in `tools/upstream-compare/package.json`. This port's own version moves on its own (see README).
 4. Run the tests and the comparison, then update the commit and the versions here.
