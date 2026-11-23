@@ -5,6 +5,13 @@
   </picture>
 </p>
 
+<p align="center">
+  <a href="https://braccato.kiyoshi.dev">Documentation</a> ·
+  <a href="https://braccato.kiyoshi.dev/quickstart/">Quickstart</a> ·
+  <a href="https://braccato.kiyoshi.dev/api/">API reference</a> ·
+  <a href="CHANGELOG.md">Changelog</a>
+</p>
+
 # braccato-kotlin
 
 A Kotlin port of [Braccato](https://github.com/better-lyrics/braccato), the synchronized lyrics engine
@@ -154,7 +161,8 @@ through `sdk.dir` in `local.properties` or `ANDROID_HOME`.
 ```
 
 The API reference for all four modules is built with `./gradlew dokkaGenerate`, into
-`build/dokka/html`. Every public declaration is documented, and the build says which one is not.
+`build/dokka/html`; the published one is at [braccato.kiyoshi.dev/api](https://braccato.kiyoshi.dev/api/). The guides
+live in `site/` (Astro Starlight) and are published to [braccato.kiyoshi.dev](https://braccato.kiyoshi.dev) on each push to `main`. Every public declaration is documented, and the build says which one is not.
 
 Publishing goes to Maven Central through the Central Portal and is signed. The credentials and the key
 are never in the repository: `mavenCentralUsername`, `mavenCentralPassword`, `signingInMemoryKey`,
