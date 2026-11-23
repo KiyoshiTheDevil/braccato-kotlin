@@ -53,6 +53,9 @@ private fun render(lyrics: BuiltLyrics, atS: Double, name: String, width: Int = 
     scene.close()
 }
 
+/** For the other render tests. */
+internal fun renderForTest(lyrics: BuiltLyrics, atS: Double, name: String, width: Int = 900, height: Int = 700) = render(lyrics, atS, name, width, height)
+
 class RenderTest {
     private val sample = buildLyrics(parseTTMLContent(SAMPLE_TTML).lyrics, SetLyricsOptions(songwriters = listOf("Ada", "Grace")))
 

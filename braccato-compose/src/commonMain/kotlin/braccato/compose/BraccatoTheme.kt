@@ -52,6 +52,12 @@ data class BraccatoTheme(
     val fontSize: Dp = 48.dp,
     val fontWeight: FontWeight = FontWeight.Bold,
     val lineHeight: Float = 1.333f,
+    /**
+     * The family for right-to-left lines (Hebrew, Arabic). The system's by default: a family of the app's
+     * own seldom holds those scripts, and on Android the fallback for them came at regular weight, thin
+     * beside the rest (Kodama Next, 2026-11-23). Null keeps [fontFamily].
+     */
+    val rtlFontFamily: FontFamily? = FontFamily.Default,
     val translatedFontFamily: FontFamily? = null,
     val translatedFontSize: Dp = 32.dp,
     val translatedFontWeight: FontWeight = FontWeight.SemiBold,

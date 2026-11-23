@@ -163,6 +163,8 @@ private fun ContentFlow(
     val words = remember(groups) { groups.flatMap { it.first.words } }
     val slots = remember(words) { List(words.size) { FlowSlot() } }
 
+    // The nudge goes along the reading: to the left, right to left (Kodama Next, 2026-11-23).
+    val readingSign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1f else 1f
     Layout(
         content = {
             words.forEachIndexed { index, word ->
@@ -175,7 +177,7 @@ private fun ContentFlow(
                     Modifier.graphicsLayer {
                         if (!context.live || !slot.wobbles) return@graphicsLayer
                         val wobble = wobbleAt(context.theme, slot.groupTime, context.effectiveEnd, context.time())
-                        translationX = wobble.translateEm * context.emPx + slot.fromGroupCentre * (wobble.scaleX - 1)
+                        translationX = readingSign * wobble.translateEm * context.emPx + slot.fromGroupCentre * (wobble.scaleX - 1)
                         scaleX = wobble.scaleX
                     },
                 )
@@ -214,7 +216,10 @@ private fun ContentFlow(
                 for (i in indices) {
                     slots[i].wobbles = true
                     slots[i].groupTime = group.words[0].time
-                    slots[i].fromGroupCentre = (x + placeables[i].width / 2f) - (groupStart + groupWidth / 2f)
+                    // Along the reading order; right to left that lies the other way on the screen, and the
+                    // words spread from the group's centre to the wrong side, into each other (Kodama Next, 2026-11-23).
+                    val along = (x + placeables[i].width / 2f) - (groupStart + groupWidth / 2f)
+                    slots[i].fromGroupCentre = if (layoutDirection == LayoutDirection.Rtl) -along else along
                     put(i)
                 }
                 continue
@@ -338,8 +343,9 @@ internal fun LyricLine(
     val measurer = rememberTextMeasurer()
     val rtl = line.direction == TextDirection.RTL
     val emPx = with(density) { theme.fontSize.toPx() }
-    val mainStyle = remember(theme, density) { theme.lineTextStyle(density) }
-    val backgroundStyle = remember(theme, density) { theme.lineTextStyle(density, 0.75f, FontWeight.Medium) }
+    val family = if (rtl) theme.rtlFontFamily else null
+    val mainStyle = remember(theme, density, family) { theme.lineTextStyle(density).let { if (family != null) it.copy(fontFamily = family) else it } }
+    val backgroundStyle = remember(theme, density, family) { theme.lineTextStyle(density, 0.75f, FontWeight.Medium).let { if (family != null) it.copy(fontFamily = family) else it } }
     val glowRadiusPx = with(density) { theme.glowRadiusFrom.toPx() }
 
     val mainContext = WordContext(theme, effectiveEnd, live, time, emPx, glowRadiusPx, theme.inactiveColor)

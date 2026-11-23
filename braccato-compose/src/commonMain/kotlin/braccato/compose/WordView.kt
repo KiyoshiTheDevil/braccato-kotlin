@@ -65,9 +65,15 @@ private fun measureRuns(measurer: TextMeasurer, word: BuiltWord, style: TextStyl
     val constraints = Constraints(maxWidth = maxWidth.coerceAtLeast(1))
     if (letters != null && letters.size > 1) {
         into.runs = letters.map { measurer.measure(it, style, overflow = TextOverflow.Visible, softWrap = false) }
+        val total = into.runs.sumOf { it.size.width }.toFloat()
+        // A right-to-left word's letters from the right: the browser's bidi does it upstream, here the
+        // letters were set left to right and Hebrew read backwards (Kodama Next, 2026-11-23).
         var x = 0f
-        into.xs = FloatArray(letters.size) { i -> x.also { x += into.runs[i].size.width } }
-        into.width = x
+        into.xs = FloatArray(letters.size) { i ->
+            val w = into.runs[i].size.width
+            (if (word.isRtl) total - x - w else x).also { x += w }
+        }
+        into.width = total
     } else {
         into.runs = listOf(measurer.measure(word.text, style, overflow = TextOverflow.Visible, constraints = constraints))
         into.xs = floatArrayOf(0f)
@@ -148,6 +154,9 @@ internal fun WordView(
                     drawGlyphs(bitmaps[i], highlightBrush(state, layout.width, word.isRtl, x, activeColor), state.opacity)
                 }
             },
+        // The glow below is laid at the word's left edge: Start, right to left, put it at the right edge, over
+        // the next word (Kodama Next, 2026-11-23).
+        contentAlignment = androidx.compose.ui.AbsoluteAlignment.TopLeft,
     ) {
         if (context.live && theme.animations.highlightGlow && margin > 0) {
             // The glow is the highlight blurred: it follows the lit part of the word, as a CSS
