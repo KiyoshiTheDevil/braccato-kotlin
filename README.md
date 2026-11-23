@@ -9,7 +9,7 @@
 
 A Kotlin port of [Braccato](https://github.com/better-lyrics/braccato), the synchronized lyrics engine
 from [Better Lyrics](https://better-lyrics.boidu.dev), for apps built with Kotlin and Compose
-Multiplatform, Kodama NEXT among them.
+Multiplatform.
 
 It is a port rather than a binding: no WebView, no JavaScript runtime. The code follows upstream file
 for file so changes there can be carried over. [UPSTREAM.md](UPSTREAM.md) records which upstream
