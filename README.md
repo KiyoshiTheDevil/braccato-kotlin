@@ -57,10 +57,10 @@ apply on top (`BraccatoTheme.fromCss`).
 ## Usage
 
 ```kotlin
-import braccato.core.LyricsTimeline
-import braccato.core.TickOptions
-import braccato.core.buildLyrics
-import braccato.parsers.detectParser
+import dev.kiyoshi.braccato.core.LyricsTimeline
+import dev.kiyoshi.braccato.core.TickOptions
+import dev.kiyoshi.braccato.core.buildLyrics
+import dev.kiyoshi.braccato.parsers.detectParser
 
 val parser = detectParser(text)
 val lyrics = parser.parse(text, songDurationMs)
@@ -76,8 +76,8 @@ val frame = timeline.tick(playerTimeS, TickOptions(isPlaying = true), now = wall
 With Compose:
 
 ```kotlin
-import braccato.compose.BraccatoLyrics
-import braccato.compose.PlaybackSnapshot
+import dev.kiyoshi.braccato.compose.BraccatoLyrics
+import dev.kiyoshi.braccato.compose.PlaybackSnapshot
 
 BraccatoLyrics(
     lyrics = remember(lyrics) { buildLyrics(lyrics, SetLyricsOptions(songwriters = songwriters)) },

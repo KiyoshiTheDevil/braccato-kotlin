@@ -6,7 +6,7 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
-    compilerOptions { optIn.add("braccato.types.internal.InternalBraccatoApi") }
+    compilerOptions { optIn.add("dev.kiyoshi.braccato.types.internal.InternalBraccatoApi") }
 }
 
 dependencies {

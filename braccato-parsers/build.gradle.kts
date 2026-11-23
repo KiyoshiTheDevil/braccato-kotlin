@@ -12,13 +12,13 @@ version = "0.4.0"
 kotlin {
     jvmToolchain(21)
     explicitApi()
-    compilerOptions { optIn.add("braccato.types.internal.InternalBraccatoApi") }
+    compilerOptions { optIn.add("dev.kiyoshi.braccato.types.internal.InternalBraccatoApi") }
     jvm {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
     }
     // The same Android settings as Kodama NEXT: Compose 1.12 needs compileSdk 37.
     android {
-        namespace = "braccato.parsers"
+        namespace = "dev.kiyoshi.braccato.parsers"
         compileSdk = 37
         minSdk = 26
     }
