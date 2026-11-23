@@ -12,6 +12,7 @@ version = "1.17.1"
 
 kotlin {
     jvmToolchain(21)
+    explicitApi()
     compilerOptions { optIn.add("braccato.types.internal.InternalBraccatoApi") }
     jvm {
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }

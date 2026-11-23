@@ -39,7 +39,7 @@ private fun canonicalLocale(tag: String): String? {
     return out.joinToString("-")
 }
 
-fun normalizeLanguage(language: String?): String {
+internal fun normalizeLanguage(language: String?): String {
     if (language.isNullOrEmpty() || language == "auto" || language == "und") return ""
     return canonicalLocale(language.jsTrim().replace("_", "-")) ?: ""
 }
@@ -61,7 +61,7 @@ private fun isCjkLanguage(language: String): Boolean {
 }
 
 /** The language each line is in, "" where it cannot be told. Only `words` and `isInstrumental` are read. */
-fun resolveLyricLanguages(lyrics: List<Lyric>, sourceLanguage: String? = null): List<String> {
+internal fun resolveLyricLanguages(lyrics: List<Lyric>, sourceLanguage: String? = null): List<String> {
     val language = normalizeLanguage(sourceLanguage)
     val hints = lyrics.map { line -> if (line.isInstrumental == true) null else detectCjkLanguage(line.words) }
     val songHints = hints.filterNotNull().toSet()
@@ -78,7 +78,7 @@ fun resolveLyricLanguages(lyrics: List<Lyric>, sourceLanguage: String? = null): 
 }
 
 /** The language a line's romanization is tagged with upstream: the line's own language, in Latin script. */
-fun romanizationLanguage(language: String?): String {
+internal fun romanizationLanguage(language: String?): String {
     val normalized = normalizeLanguage(language)
     return "${if (normalized.isNotEmpty()) normalized.split("-")[0] else "und"}-Latn"
 }

@@ -3,9 +3,11 @@
 // Compose renderer defines its own.
 package braccato.core
 
+import braccato.types.internal.InternalBraccatoApi
+
 // -- Word state --------------------------------------------
 
-enum class WordState(val value: String) {
+public enum class WordState(public val value: String) {
     UPCOMING("upcoming"),
     ACTIVE("active"),
     PAST("past"),
@@ -14,7 +16,7 @@ enum class WordState(val value: String) {
 // -- Layout --------------------------------------------
 
 /** `SCROLL` is the scrolling lyrics view. `STAGE` shows only what is being sung. */
-enum class LyricsLayout { SCROLL, STAGE }
+public enum class LyricsLayout { SCROLL, STAGE }
 
 // -- Ticking --------------------------------------------
 
@@ -22,7 +24,7 @@ enum class LyricsLayout { SCROLL, STAGE }
  * The play state is the only thing a tick cannot be given a sensible default for. Everything else
  * describes a setting the consumer may not have, so it may be left out.
  */
-data class TickOptions(
+public data class TickOptions(
     val isPlaying: Boolean,
     /**
      * Wall clock timestamp of the player snapshot the time came from, in milliseconds. Defaults to
@@ -49,7 +51,7 @@ data class TickOptions(
  * A tick with nothing left out. The engine reads every field unconditionally, so the defaults are
  * filled in at the edge rather than guessed at each read.
  */
-data class ResolvedTickOptions(
+@InternalBraccatoApi public data class ResolvedTickOptions(
     val isPlaying: Boolean,
     val eventCreationTime: Double,
     val smoothScroll: Boolean,

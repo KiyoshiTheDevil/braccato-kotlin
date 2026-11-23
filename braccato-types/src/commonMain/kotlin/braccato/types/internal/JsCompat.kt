@@ -11,26 +11,26 @@ import kotlin.math.floor
 
 @RequiresOptIn("Internal to the braccato modules; it may change without notice.")
 @Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY)
-annotation class InternalBraccatoApi
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY, AnnotationTarget.CLASS, AnnotationTarget.TYPEALIAS, AnnotationTarget.CONSTRUCTOR)
+public annotation class InternalBraccatoApi
 
 /** JavaScript's WhiteSpace and LineTerminator characters, as the body of a regex character class. */
 @InternalBraccatoApi
-const val JS_WHITESPACE = "\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF"
+public const val JS_WHITESPACE: String = "\\t\\n\\u000B\\f\\r \\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF"
 
 /** JavaScript's `\s`. */
 @InternalBraccatoApi
-const val WS = "[$JS_WHITESPACE]"
+public const val WS: String = "[$JS_WHITESPACE]"
 
 @InternalBraccatoApi
-fun isJsWhitespace(c: Char): Boolean = when (c) {
+public fun isJsWhitespace(c: Char): Boolean = when (c) {
     '\t', '\n', '\u000B', '\u000C', '\r', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '　', '﻿' -> true
     else -> c in ' '..' '
 }
 
 /** `String.prototype.trim`. */
 @InternalBraccatoApi
-fun String.jsTrim(): String {
+public fun String.jsTrim(): String {
     var start = 0
     var end = length
     while (start < end && isJsWhitespace(this[start])) start++
@@ -40,7 +40,7 @@ fun String.jsTrim(): String {
 
 /** `String.prototype.trimStart`. */
 @InternalBraccatoApi
-fun String.jsTrimStart(): String {
+public fun String.jsTrimStart(): String {
     var start = 0
     while (start < length && isJsWhitespace(this[start])) start++
     return substring(start)
@@ -51,7 +51,7 @@ fun String.jsTrimStart(): String {
  * the pieces. Kotlin's `split` leaves them out.
  */
 @InternalBraccatoApi
-fun String.jsSplit(regex: Regex): List<String> {
+public fun String.jsSplit(regex: Regex): List<String> {
     val out = mutableListOf<String>()
     var last = 0
     for (match in regex.findAll(this)) {
@@ -65,7 +65,7 @@ fun String.jsSplit(regex: Regex): List<String> {
 
 /** `Math.round`: halves go up, and NaN and the infinities pass through. */
 @InternalBraccatoApi
-fun jsRound(value: Double): Double {
+public fun jsRound(value: Double): Double {
     if (value.isNaN() || value.isInfinite()) return value
     val down = floor(value)
     return if (value - down >= 0.5) down + 1 else down
@@ -73,7 +73,7 @@ fun jsRound(value: Double): Double {
 
 /** `Number.parseInt`: reads the longest prefix of digits, NaN when there are none. */
 @InternalBraccatoApi
-fun jsParseInt(input: String, radix: Int = 10): Double {
+public fun jsParseInt(input: String, radix: Int = 10): Double {
     var s = input.jsTrimStart()
     var sign = 1.0
     if (s.startsWith("-")) {
@@ -95,7 +95,7 @@ private val PARSE_FLOAT_PREFIX = Regex("""^[+-]?(Infinity|(\d+\.?\d*|\.\d+)([eE]
 
 /** `Number.parseFloat`: reads the longest prefix that is a decimal literal, NaN when there is none. */
 @InternalBraccatoApi
-fun jsParseFloat(input: String): Double {
+public fun jsParseFloat(input: String): Double {
     val match = PARSE_FLOAT_PREFIX.find(input.jsTrimStart()) ?: return Double.NaN
     return match.value.toDouble()
 }
@@ -105,7 +105,7 @@ private val NUMBER_PREFIXED = Regex("""^0([xXoObB])([0-9a-fA-F]+)\z""")
 
 /** `Number(string)`: the whole string as a number, 0 when it is blank, NaN when it is anything else. */
 @InternalBraccatoApi
-fun jsNumber(input: String): Double {
+public fun jsNumber(input: String): Double {
     val s = input.jsTrim()
     if (s.isEmpty()) return 0.0
     if (NUMBER_DECIMAL.containsMatchIn(s)) return s.toDouble()
@@ -122,7 +122,7 @@ fun jsNumber(input: String): Double {
 
 /** `String.fromCodePoint` for one code point. */
 @InternalBraccatoApi
-fun codePointToString(codePoint: Int): String {
+public fun codePointToString(codePoint: Int): String {
     if (codePoint < 0x10000) return codePoint.toChar().toString()
     val offset = codePoint - 0x10000
     val high = (0xD800 + (offset shr 10)).toChar()

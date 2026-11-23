@@ -52,10 +52,10 @@ private fun parseTime(timeStr: String?): Double {
     return jsRound(totalMs)
 }
 
-fun parseTTMLTime(timeStr: String?): Double = parseTime(timeStr)
+internal fun parseTTMLTime(timeStr: String?): Double = parseTime(timeStr)
 
 /** Upstream takes a number as it is, except a falsy one (0 or NaN), which reads as 0. */
-fun parseTTMLTime(time: Double): Double = if (time == 0.0 || time.isNaN()) 0.0 else time
+internal fun parseTTMLTime(time: Double): Double = if (time == 0.0 || time.isNaN()) 0.0 else time
 
 // -- Agents --------------------------------------------
 
@@ -86,7 +86,7 @@ private fun extractAgentMapping(metadataElements: List<XmlNode>): Map<String, St
  * document's head gives them (`<ttm:agent xml:id="…" type="person"><ttm:name>…</ttm:name>`). Not
  * upstream, which reads no names: for a host that shows who sings. Agents without a name are left out.
  */
-fun parseTTMLAgentNames(content: String): Map<String, String> {
+public fun parseTTMLAgentNames(content: String): Map<String, String> {
     val names = LinkedHashMap<String, String>()
     var voiceIndex = 0
     val agentRegex = Regex("""<(?:[\w.-]+:)?agent\b([^>]*?)(/>|>(.*?)</(?:[\w.-]+:)?agent>)""", RegexOption.DOT_MATCHES_ALL)
@@ -221,14 +221,14 @@ private fun declareMissingNamespaces(content: String): String {
 
 // -- Parser --------------------------------------------
 
-data class ParseTTMLOptions(
+public data class ParseTTMLOptions(
     /** Used for the outro instrumental when the document's `<body>` carries no `dur`. */
     val songDurationMs: Double? = null,
     /** Silence longer than this becomes an instrumental line. Defaults to 5000. */
     val instrumentalGapMs: Double? = null,
 )
 
-data class ParsedTTML(
+public data class ParsedTTML(
     val lyrics: List<Lyric>,
     val isWordSynced: Boolean,
     val language: String? = null,
@@ -298,7 +298,7 @@ private fun readSongwriters(metadataElements: List<XmlNode>): List<String> {
 
 private fun String?.orIfEmpty(fallback: String?): String? = if (isNullOrEmpty()) fallback else this
 
-fun parseTTMLContent(xml: String, options: ParseTTMLOptions = ParseTTMLOptions()): ParsedTTML {
+public fun parseTTMLContent(xml: String, options: ParseTTMLOptions = ParseTTMLOptions()): ParsedTTML {
     val ttContainer = readTtmlRoot(xml) ?: return ParsedTTML(lyrics = emptyList(), isWordSynced = false)
 
     val tt = ttContainer.children
@@ -431,7 +431,7 @@ fun parseTTMLContent(xml: String, options: ParseTTMLOptions = ParseTTMLOptions()
     return ParsedTTML(lyrics = lyricArray, isWordSynced = isWordSynced, language = language)
 }
 
-object TTMLParser : LyricParser {
+public object TTMLParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isTtml(input)
     }

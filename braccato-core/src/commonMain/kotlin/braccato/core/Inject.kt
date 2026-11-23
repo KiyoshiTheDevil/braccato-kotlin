@@ -25,7 +25,7 @@ private val SPACE_REGEX = Regex("^[$JS_WHITESPACE]+$")
 private val CHUNK_REGEX = Regex("[$JS_WHITESPACE]+|[^$JS_WHITESPACE]+")
 private val LETTER_OR_NUMBER = Regex("[\\p{L}\\p{N}]")
 
-fun findNearestAgent(lyrics: List<Lyric>, fromIndex: Int): String? {
+internal fun findNearestAgent(lyrics: List<Lyric>, fromIndex: Int): String? {
     // Look in the downwards direction first
     for (i in fromIndex + 1 until lyrics.size) {
         if (lyrics[i].isInstrumental != true && !lyrics[i].agent.isNullOrEmpty()) {
@@ -40,7 +40,7 @@ fun findNearestAgent(lyrics: List<Lyric>, fromIndex: Int): String? {
     return null
 }
 
-fun isNearestLyricRtl(lyrics: List<Lyric>, fromIndex: Int): Boolean {
+internal fun isNearestLyricRtl(lyrics: List<Lyric>, fromIndex: Int): Boolean {
     // Look in the downwards direction first
     for (i in fromIndex + 1 until lyrics.size) {
         if (lyrics[i].isInstrumental != true && lyrics[i].words.jsTrim().isNotEmpty()) {
@@ -59,7 +59,7 @@ fun isNearestLyricRtl(lyrics: List<Lyric>, fromIndex: Int): Boolean {
 
 // A line whose parts are missing, empty or overridden by the theme is rebuilt as line synced words,
 // which carry no duration, so only pre-existing timed parts count as rich sync.
-fun deriveSyncType(lyrics: List<Lyric>): LyricSyncType {
+internal fun deriveSyncType(lyrics: List<Lyric>): LyricSyncType {
     val hasTimedParts =
         !CoreSettings.disableRichsync.getBooleanValue() &&
             lyrics.any { item -> item.isInstrumental != true && item.parts?.any { part -> part.durationMs != 0.0 } == true }
@@ -69,9 +69,9 @@ fun deriveSyncType(lyrics: List<Lyric>): LyricSyncType {
 }
 
 /** Which way a run of text reads. `AUTO` is upstream's `dir="auto"` with no class: left to the text. */
-enum class TextDirection { RTL, LTR, AUTO }
+public enum class TextDirection { RTL, LTR, AUTO }
 
-fun detectDirection(text: String): TextDirection {
+internal fun detectDirection(text: String): TextDirection {
     var index = 0
     while (index < text.length) {
         val end = if (text[index].isHighSurrogate() && index + 1 < text.length) index + 2 else index + 1
@@ -84,12 +84,12 @@ fun detectDirection(text: String): TextDirection {
 }
 
 /** Whether text holds right-to-left script, so the browser's bidi ordering matters inside its run. */
-fun isBidiSensitive(text: String): Boolean = testRtl(text)
+internal fun isBidiSensitive(text: String): Boolean = testRtl(text)
 
 // -- Tokens --------------------------------------------
 
 /** A run of whitespace, or a part narrowed to one word with its share of the part's time. */
-sealed interface RenderToken {
+internal sealed interface RenderToken {
     val text: String
 
     data class Space(override val text: String) : RenderToken
@@ -98,13 +98,13 @@ sealed interface RenderToken {
 }
 
 /** Words that run together with no space between them: one, or one split into syllables. */
-data class WordGroup(
+internal data class WordGroup(
     val text: String,
     val isBackground: Boolean,
     val tokens: List<RenderToken>,
 )
 
-fun splitPartIntoTokens(part: LyricPart): List<RenderToken> {
+internal fun splitPartIntoTokens(part: LyricPart): List<RenderToken> {
     val chunks = CHUNK_REGEX.findAll(part.words).map { it.value }.toList()
 
     if (chunks.isEmpty()) return emptyList()
@@ -134,12 +134,12 @@ fun splitPartIntoTokens(part: LyricPart): List<RenderToken> {
     }
 }
 
-fun normalizeParts(parts: List<LyricPart>): List<RenderToken> {
+internal fun normalizeParts(parts: List<LyricPart>): List<RenderToken> {
     return parts.flatMap(::splitPartIntoTokens)
 }
 
 /** Each element is a [WordGroup] or a [RenderToken.Space]. */
-fun groupTokensByWord(tokens: List<RenderToken>): List<Any> {
+internal fun groupTokensByWord(tokens: List<RenderToken>): List<Any> {
     val groups = mutableListOf<Any>()
     var currentText = ""
     var currentBackground = false
@@ -179,46 +179,46 @@ fun groupTokensByWord(tokens: List<RenderToken>): List<Any> {
 // -- Built line --------------------------------------------
 
 /** One timed word, upstream's `PartData` without its elements. Times in seconds. */
-class BuiltWord(
-    val text: String,
+public class BuiltWord(
+    public val text: String,
     override val time: Double,
     override val duration: Double,
-    val isBackground: Boolean,
-    val explicit: Boolean,
+    public val isBackground: Boolean,
+    public val explicit: Boolean,
     /** A word with no duration of its own, from a line synced line: it fades in rather than sweeps. */
-    val isLineSynced: Boolean,
-    val isRtl: Boolean,
+    public val isLineSynced: Boolean,
+    public val isRtl: Boolean,
     /** Held longer than `blyrics-long-word-threshold`, which themes style differently. */
-    val isLongWord: Boolean,
+    public val isLongWord: Boolean,
     /** The word's graphemes, when its letters wave and sweep one at a time. Null otherwise. */
-    val letters: List<String>?,
+    public val letters: List<String>?,
     /**
      * Where a word too long to fit may wrap: its text in chunks of `blyrics-long-word-wrap-threshold`.
      * Null when it is short enough, lettered, or in a joining script, which must not be split.
      */
-    val wrapChunks: List<String>?,
+    public val wrapChunks: List<String>?,
     /** Only a word's first syllable carries its group, so a word split into syllables wobbles once, whole. */
-    val wobbles: Boolean,
+    public val wobbles: Boolean,
 ) : TimedPart
 
 /** What a content line holds, in order: words grouped as they run together, and the spaces between. */
-sealed interface LineItem {
-    data class Space(val text: String) : LineItem
+public sealed interface LineItem {
+    public data class Space(val text: String) : LineItem
 
-    class Group(
-        val text: String,
-        val isBackground: Boolean,
+    public class Group(
+        public val text: String,
+        public val isBackground: Boolean,
         /** Longer than twice the wrap threshold, which themes let break anywhere. */
-        val isLong: Boolean,
-        val words: List<BuiltWord>,
+        public val isLong: Boolean,
+        public val words: List<BuiltWord>,
     ) : LineItem
 }
 
 /** One content line: the main one, the background vocals under it, or a timed romanization. */
-class ContentLine(
-    val text: String,
-    val items: List<LineItem>,
-    val isBidiSensitive: Boolean,
+public class ContentLine(
+    public val text: String,
+    public val items: List<LineItem>,
+    public val isBidiSensitive: Boolean,
 )
 
 /** `createWordGroup`: the group's words, and whether they are lettered. */
@@ -265,15 +265,15 @@ private fun buildWordGroup(group: WordGroup, words: MutableList<BuiltWord>): Lin
 }
 
 /** The content of a line built from its parts: `createLyricsLine`. */
-class LineContent(
-    val main: ContentLine,
+public class LineContent(
+    public val main: ContentLine,
     /** Null when the line has no background vocals. */
-    val background: ContentLine?,
+    public val background: ContentLine?,
     /** Every word, in the order upstream animates them. */
-    val words: List<BuiltWord>,
+    public val words: List<BuiltWord>,
 )
 
-fun createLyricsLine(parts: List<LyricPart>, splitBackgroundLine: Boolean = true): LineContent {
+internal fun createLyricsLine(parts: List<LyricPart>, splitBackgroundLine: Boolean = true): LineContent {
     val lineText = parts.joinToString("") { part -> part.words }
     val mainText = if (splitBackgroundLine) {
         parts.filter { part -> part.isBackground != true }.joinToString("") { part -> part.words }
@@ -322,7 +322,7 @@ fun createLyricsLine(parts: List<LyricPart>, splitBackgroundLine: Boolean = true
     )
 }
 
-fun buildLineSyncedParts(item: Lyric): List<LyricPart> {
+internal fun buildLineSyncedParts(item: Lyric): List<LyricPart> {
     val parts = mutableListOf<LyricPart>()
     var wordIndex = 0
 
@@ -342,7 +342,7 @@ fun buildLineSyncedParts(item: Lyric): List<LyricPart> {
 // -- Decorations --------------------------------------------
 
 /** A translation hung under a line: `injectTranslation`. Equal when it shows the same. */
-data class BuiltTranslation(
+public data class BuiltTranslation(
     val text: String,
     val language: String,
     val direction: TextDirection,
@@ -352,7 +352,7 @@ data class BuiltTranslation(
  * A romanization hung under a line: `injectRomanization`. Timed, it carries words that sweep like the
  * line's. Equal when it shows the same, which is what upstream's `decorationSources` compares.
  */
-data class BuiltRomanization(
+public data class BuiltRomanization(
     val text: String,
     val language: String,
     val direction: TextDirection,
@@ -368,7 +368,7 @@ data class BuiltRomanization(
  *
  * @param mainText The line's main text, as built.
  */
-fun buildTranslation(mainText: String, text: String, language: String? = null): BuiltTranslation? {
+public fun buildTranslation(mainText: String, text: String, language: String? = null): BuiltTranslation? {
     if (isSameText(mainText, text)) return null
     return BuiltTranslation(text = text, language = normalizeLanguage(language), direction = detectDirection(text))
 }
@@ -377,7 +377,7 @@ fun buildTranslation(mainText: String, text: String, language: String? = null): 
  * The romanization for a line, or null when it only repeats the line. Its language is the line's, in
  * Latin script. Timed parts are built into words unless the theme turned rich sync off.
  */
-fun buildRomanization(
+public fun buildRomanization(
     mainText: String,
     lineLanguage: String,
     text: String,
@@ -408,4 +408,4 @@ internal fun codePoints(text: String): List<String> {
 }
 
 /** `Intl.Segmenter` with grapheme granularity: what a reader sees as one character. */
-expect fun splitGraphemes(text: String): List<String>
+internal expect fun splitGraphemes(text: String): List<String>

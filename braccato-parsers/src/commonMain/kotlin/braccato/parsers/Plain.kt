@@ -3,7 +3,7 @@ package braccato.parsers
 
 import braccato.types.Lyric
 
-object PlainParser : LyricParser {
+public object PlainParser : LyricParser {
     override fun detect(input: String): Boolean {
         return true
     }

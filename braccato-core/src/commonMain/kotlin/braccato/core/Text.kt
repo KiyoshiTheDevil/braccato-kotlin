@@ -21,9 +21,9 @@ private val JOINING_SCRIPT_REGEX = Regex(
         "\\u0640\\u064B-\\u0655\\u0670\\u060C\\u061B\\u061C\\u061F\\u06D4\\u1802\\u1803\\u1805]",
 )
 
-fun testRtl(text: String): Boolean = RTL_REGEX.containsMatchIn(text)
+internal fun testRtl(text: String): Boolean = RTL_REGEX.containsMatchIn(text)
 
-fun testJoiningScript(text: String): Boolean = JOINING_SCRIPT_REGEX.containsMatchIn(text)
+internal fun testJoiningScript(text: String): Boolean = JOINING_SCRIPT_REGEX.containsMatchIn(text)
 
 /**
  * Any character outside the Latin and Common scripts (Script_Extensions upstream), so letters of
@@ -36,7 +36,7 @@ private val nonLatinRegex = Regex("[^\\p{IsLatin}\\p{IsCommon}]")
  * @param text The string to check.
  * @return True if a non-Latin character is found, otherwise false.
  */
-fun containsNonLatin(text: String): Boolean {
+internal fun containsNonLatin(text: String): Boolean {
     return nonLatinRegex.containsMatchIn(text)
 }
 
@@ -64,7 +64,7 @@ private val SCRIPT_TO_LANG: List<Pair<Regex, String>> = listOf(
     Regex("\\p{IsLao}") to "lo",
 )
 
-fun detectNonLatinLanguage(text: String): String? {
+internal fun detectNonLatinLanguage(text: String): String? {
     for ((regex, lang) in SCRIPT_TO_LANG) {
         if (regex.containsMatchIn(text)) return lang
     }
@@ -75,4 +75,4 @@ private val PUNCTUATION = Regex("\\p{P}")
 
 private fun comparable(text: String): String = text.lowercase().replace(PUNCTUATION, "").jsTrim()
 
-fun isSameText(a: String, b: String): Boolean = comparable(a) == comparable(b)
+internal fun isSameText(a: String, b: String): Boolean = comparable(a) == comparable(b)

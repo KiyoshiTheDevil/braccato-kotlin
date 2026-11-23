@@ -18,7 +18,7 @@ private fun parseSRTTime(timeStr: String): Double {
     return hours * 3600000 + minutes * 60000 + seconds * 1000 + ms
 }
 
-object SRTParser : LyricParser {
+public object SRTParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isSrt(input)
     }

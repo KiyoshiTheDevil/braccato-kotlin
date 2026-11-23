@@ -73,7 +73,7 @@ internal fun stageSide(line: BuiltLine, isDuet: Boolean): LineSide {
  *   the stage, which is raised by its height, so the capsule always stands in the same place.
  */
 @Composable
-fun BraccatoStage(
+public fun BraccatoStage(
     lyrics: BuiltLyrics,
     playback: () -> PlaybackSnapshot,
     modifier: Modifier = Modifier,

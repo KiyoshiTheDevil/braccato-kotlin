@@ -10,7 +10,7 @@ import braccato.types.Lyric
 import braccato.types.LyricSyncType
 import braccato.types.internal.jsTrim
 
-data class SetLyricsOptions(
+public data class SetLyricsOptions(
     /** BCP 47 language of the original lyrics. Kana/Hangul provide a fallback when omitted. */
     val language: String? = null,
     /** These lyrics are a "not found" placeholder rather than a real result. */
@@ -20,40 +20,40 @@ data class SetLyricsOptions(
 )
 
 /** One line as the renderer draws it: upstream's `LineData` and the element built for it. Times in seconds. */
-class BuiltLine(
-    val index: Int,
+public class BuiltLine(
+    public val index: Int,
     /** The lyric the line was built from, untouched. */
-    val lyric: Lyric,
+    public val lyric: Lyric,
     override val time: Double,
     override val duration: Double,
-    val isInstrumental: Boolean,
+    public val isInstrumental: Boolean,
     /** A sung line with no words, which marks a pause. */
-    val isBlank: Boolean,
+    public val isBlank: Boolean,
     /** `v1` lead, `v2`/`v3` the other side, `v1000` the group. An instrumental takes its neighbours'. */
-    val agent: String?,
-    val direction: TextDirection,
+    public val agent: String?,
+    public val direction: TextDirection,
     /** The line's language, "" where it cannot be told. */
-    val language: String,
+    public val language: String,
     /** Null for an instrumental line. */
-    val content: LineContent?,
+    public val content: LineContent?,
 ) : TimedPart {
     /** Every word of the line, in the order they are sung. Empty for an instrumental. */
-    val words: List<BuiltWord> get() = content?.words ?: emptyList()
+    public val words: List<BuiltWord> get() = content?.words ?: emptyList()
 }
 
-class BuiltLyrics(
-    val lines: List<BuiltLine>,
-    val syncType: LyricSyncType,
+public class BuiltLyrics(
+    public val lines: List<BuiltLine>,
+    public val syncType: LyricSyncType,
     /** Every line starts at zero: there is no time to seek to, and clicking a line does nothing. */
-    val allZero: Boolean,
-    val noLyrics: Boolean,
+    public val allZero: Boolean,
+    public val noLyrics: Boolean,
     /** The credits line after the last lyric, or null when there is none to show. */
-    val credits: String?,
+    public val credits: String?,
     /** Stage layout: both sides are sung, so lines take sides rather than staying centred. */
-    val isStageDuet: Boolean,
+    public val isStageDuet: Boolean,
 )
 
-fun formatSongwriters(names: List<String>): String {
+internal fun formatSongwriters(names: List<String>): String {
     return if (names.size > 1) "${names.dropLast(1).joinToString(", ")} & ${names.last()}" else (names.firstOrNull() ?: "")
 }
 
@@ -101,7 +101,7 @@ private fun buildLine(lyrics: List<Lyric>, lineIndex: Int, languages: List<Strin
 }
 
 /** `setLyrics`: builds every line, and what the container records about the song as a whole. */
-fun buildLyrics(
+public fun buildLyrics(
     lyrics: List<Lyric>,
     options: SetLyricsOptions = SetLyricsOptions(),
     layout: LyricsLayout = LyricsLayout.SCROLL,

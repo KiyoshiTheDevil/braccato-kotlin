@@ -8,27 +8,29 @@
 // told apart from playback) are in Timeline.kt.
 package braccato.core
 
+import braccato.types.internal.InternalBraccatoApi
+
 import braccato.types.internal.jsParseFloat
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
-const val USER_SCROLL_RESUME_DELAY_MS = 25000.0
-const val PASSIVE_USER_SCROLL_RESUME_DELAY_MS = 5000.0
+internal const val USER_SCROLL_RESUME_DELAY_MS = 25000.0
+internal const val PASSIVE_USER_SCROLL_RESUME_DELAY_MS = 5000.0
 
-const val TIME_JUMP_THRESHOLD = 0.5
+internal const val TIME_JUMP_THRESHOLD = 0.5
 // One Gecko step (~45ms) plus margin: a read further off is a seek or a timer spike, not media lag.
-const val CLOCK_RESYNC_THRESHOLD_S = 0.06
-const val CLOCK_SLEW_PER_S = 0.1
-const val SCROLL_PREPARE_LEAD_MS = 120.0
-const val LINE_SCROLL_FALLBACK_DURATION_MS = 750.0
+internal const val CLOCK_RESYNC_THRESHOLD_S = 0.06
+internal const val CLOCK_SLEW_PER_S = 0.1
+internal const val SCROLL_PREPARE_LEAD_MS = 120.0
+internal const val LINE_SCROLL_FALLBACK_DURATION_MS = 750.0
 
 /**
  * Stands where a snapshot's wall clock timestamp would be when the time did not come from a live
  * player, and so says nothing about how long ago it was sampled.
  */
-const val NO_PLAYER_SNAPSHOT = -1.0
+internal const val NO_PLAYER_SNAPSHOT = -1.0
 
 // -- Playback clock --------------------------
 
@@ -37,7 +39,7 @@ const val NO_PLAYER_SNAPSHOT = -1.0
  * and never early. A read ahead of the prediction is taken as it is; one slightly behind is followed
  * a tenth of the way per second; one far behind is a seek and is taken as it is.
  */
-fun smoothedPlaybackTime(
+internal fun smoothedPlaybackTime(
     previousTime: Double,
     previousAt: Double,
     rawTime: Double,
@@ -55,16 +57,16 @@ fun smoothedPlaybackTime(
 // -- Word states --------------------------
 
 /** One word's timing, in seconds, as `updateWordStates` reads it. */
-interface TimedPart {
-    val time: Double
-    val duration: Double
+public interface TimedPart {
+    public val time: Double
+    public val duration: Double
 }
 
 /**
  * `updateWordStates` without the attribute writes: where each word of a line stands at a time. A
  * word without a duration of its own lasts until the next one starts, or the line ends.
  */
-fun wordStatesAt(parts: List<TimedPart>, lineTime: Double, lineDuration: Double, currentTime: Double): List<WordState> {
+internal fun wordStatesAt(parts: List<TimedPart>, lineTime: Double, lineDuration: Double, currentTime: Double): List<WordState> {
     val lineEndTime = lineTime + lineDuration
     return parts.mapIndexed { i, part ->
         val endTime = if (part.duration > 0) part.time + part.duration else (parts.getOrNull(i + 1)?.time ?: lineEndTime)
@@ -82,7 +84,7 @@ fun wordStatesAt(parts: List<TimedPart>, lineTime: Double, lineDuration: Double,
  * When a word's highlight runs, from `startWordAnimations`. The swipe runs ahead of the word by a share
  * of its duration and lasts longer than it, both set by the theme.
  */
-data class WordHighlightTiming(
+@InternalBraccatoApi public data class WordHighlightTiming(
     /** How far into the word the time is, in milliseconds. Negative before it starts. */
     val wordElapsedMs: Double,
     val swipeLeadMs: Double,
@@ -91,7 +93,7 @@ data class WordHighlightTiming(
     val swipeDurationMs: Double,
 )
 
-fun planWordHighlight(partTime: Double, partDuration: Double, currentTime: Double): WordHighlightTiming {
+@InternalBraccatoApi public fun planWordHighlight(partTime: Double, partDuration: Double, currentTime: Double): WordHighlightTiming {
     val rawElapsedMs = (currentTime - partTime) * 1000
     // Providers do ship words that end before they start, so a negative duration counts as none.
     val timedDurationMs = max(0.0, partDuration * 1000)
@@ -104,9 +106,9 @@ fun planWordHighlight(partTime: Double, partDuration: Double, currentTime: Doubl
     )
 }
 
-data class SwipeEdge(val start: Double, val end: Double)
+internal data class SwipeEdge(val start: Double, val end: Double)
 
-data class LetterSwipeWindow(
+internal data class LetterSwipeWindow(
     val delayMs: Double,
     val durationMs: Double,
     val from: SwipeEdge,
@@ -117,7 +119,7 @@ data class LetterSwipeWindow(
  * The swipe, as a theme states it: an easing, and where the gradient's two edges run from and to, as
  * a share of the word. The values are the CSS strings the theme wrote.
  */
-data class SwipeRamp(
+@InternalBraccatoApi public data class SwipeRamp(
     val easing: String,
     val startFrom: String,
     val startTo: String,
@@ -126,7 +128,7 @@ data class SwipeRamp(
 )
 
 // null unless the ramp is linear and forward; planLetterMaskSweep sweeps the whole word instead there.
-fun computeLetterSwipeWindows(swipe: SwipeRamp, letterCount: Int, swipeDurationMs: Double): List<LetterSwipeWindow>? {
+internal fun computeLetterSwipeWindows(swipe: SwipeRamp, letterCount: Int, swipeDurationMs: Double): List<LetterSwipeWindow>? {
     if (swipe.easing != "linear" || swipeDurationMs <= 0 || letterCount <= 0) {
         return null
     }
@@ -160,12 +162,12 @@ fun computeLetterSwipeWindows(swipe: SwipeRamp, letterCount: Int, swipeDurationM
  * One keyframe of a letter's mask sweep. Upstream writes the position as the CSS string
  * `"<x>% 0%"`; this is `x / 100`, the horizontal mask position as a fraction.
  */
-data class LetterMaskKeyframe(
+internal data class LetterMaskKeyframe(
     val offset: Double,
     val maskPositionX: Double,
 )
 
-data class LetterMaskSweep(
+internal data class LetterMaskSweep(
     val keyframes: List<LetterMaskKeyframe>,
     val delayMs: Double,
     val durationMs: Double,
@@ -175,7 +177,7 @@ data class LetterMaskSweep(
 // Per-letter mask reveal. A linear forward ramp keeps the short windowed animations so a settled letter
 // holds a finished one; any other easing runs the same geometry over the whole duration, letting the
 // theme easing warp when each letter reveals, so it ends revealed rather than swept past.
-fun planLetterMaskSweep(swipe: SwipeRamp, letterCount: Int, swipeDurationMs: Double, rtl: Boolean): List<LetterMaskSweep> {
+internal fun planLetterMaskSweep(swipe: SwipeRamp, letterCount: Int, swipeDurationMs: Double, rtl: Boolean): List<LetterMaskSweep> {
     if (letterCount <= 0) return emptyList()
     val windows = computeLetterSwipeWindows(swipe.copy(easing = "linear"), letterCount, swipeDurationMs)
         ?: return emptyList()
@@ -210,9 +212,9 @@ fun planLetterMaskSweep(swipe: SwipeRamp, letterCount: Int, swipeDurationMs: Dou
 }
 
 // How far through its float a letter crests, as a keyframe offset.
-const val LETTER_WAVE_CREST_OFFSET = 0.4
+@InternalBraccatoApi public const val LETTER_WAVE_CREST_OFFSET: Double = 0.4
 
-data class LetterWaveTiming(
+@InternalBraccatoApi public data class LetterWaveTiming(
     val delayMs: Double,
     val durationMs: Double,
 )
@@ -221,7 +223,7 @@ data class LetterWaveTiming(
 // crests just as the swipe finishes lighting it. If the swipe lights it faster than the float rises,
 // it starts early enough to make that, which on a short word means before the word itself does. If the
 // swipe lights it slower, it starts as the swipe touches it and its float stretches to crest on time.
-fun planLetterWave(
+@InternalBraccatoApi public fun planLetterWave(
     swipe: SwipeRamp,
     letterCount: Int,
     wordDurationMs: Double,
@@ -262,7 +264,7 @@ private val OPAQUE_HEX = Regex("""^#(?:[0-9a-f]{3}|[0-9a-f]{6})$""")
 private val NAMED_COLOR = Regex("""^[a-z]+$""")
 
 // null for an unrecognized format, which the caller treats as opaque so a visible glow is never dropped.
-fun parseColorAlpha(value: String): Double? {
+internal fun parseColorAlpha(value: String): Double? {
     val color = value.trim().lowercase()
     if (color.isEmpty()) return null
     if (color == "transparent") return 0.0
@@ -284,12 +286,12 @@ fun parseColorAlpha(value: String): Double? {
 
 // -- Visible scroll band --------------------------
 
-data class ScrollInsets(
+public data class ScrollInsets(
     val top: Double,
     val bottom: Double,
 )
 
-val NO_SCROLL_INSETS = ScrollInsets(top = 0.0, bottom = 0.0)
+internal val NO_SCROLL_INSETS = ScrollInsets(top = 0.0, bottom = 0.0)
 
 private fun resolveScrollInset(value: String, viewportHeight: Double): Double {
     val amount = jsParseFloat(value)
@@ -302,14 +304,14 @@ private fun resolveScrollInset(value: String, viewportHeight: Double): Double {
  * such as an edge faded out by a mask. Insets that leave no band at all are ignored rather than
  * obeyed, since there would be nowhere left to put a line.
  */
-fun resolveScrollInsets(scrollPaddingTop: String, scrollPaddingBottom: String, viewportHeight: Double): ScrollInsets {
+internal fun resolveScrollInsets(scrollPaddingTop: String, scrollPaddingBottom: String, viewportHeight: Double): ScrollInsets {
     val top = resolveScrollInset(scrollPaddingTop, viewportHeight)
     val bottom = resolveScrollInset(scrollPaddingBottom, viewportHeight)
     return if (top + bottom < viewportHeight) ScrollInsets(top = top, bottom = bottom) else NO_SCROLL_INSETS
 }
 
 /** A line as the scroll reads it: its time in seconds and where it sits in the content, in pixels. */
-interface ScrollTargetLine {
+internal interface ScrollTargetLine {
     val time: Double
     val duration: Double
     val position: Double
@@ -321,13 +323,13 @@ interface ScrollTargetLine {
  * tail, such as a background echo or a held note, and a later one is still in its lookahead. A line
  * stays active past its own end until the next one starts, so a started line only wins while it runs.
  */
-fun <Line : ScrollTargetLine> findScrollAnchor(sungLines: List<Line>, scrollTime: Double): Line {
+internal fun <Line : ScrollTargetLine> findScrollAnchor(sungLines: List<Line>, scrollTime: Double): Line {
     return sungLines.lastOrNull { line -> line.time <= scrollTime && scrollTime < line.time + line.duration }
         ?: sungLines.lastOrNull { line -> line.time <= scrollTime }
         ?: sungLines[0]
 }
 
-data class ScrollTarget(val scrollTop: Double, val overflowsBand: Boolean)
+internal data class ScrollTarget(val scrollTop: Double, val overflowsBand: Boolean)
 
 /**
  * Where to scroll so the lines being sung sit around the target, inside the visible band. When they
@@ -336,7 +338,7 @@ data class ScrollTarget(val scrollTop: Double, val overflowsBand: Boolean)
  *
  * @param sungLines In order, never empty. The last is the last active line.
  */
-fun computeActiveLinesScrollTop(
+internal fun computeActiveLinesScrollTop(
     sungLines: List<ScrollTargetLine>,
     anchor: ScrollTargetLine,
     viewportHeight: Double,
@@ -367,7 +369,7 @@ fun computeActiveLinesScrollTop(
  * a missing one would not fail: it would quietly turn the playback time into NaN and leave the view
  * matching no line at all.
  */
-fun resolveTickOptions(options: TickOptions): ResolvedTickOptions {
+@InternalBraccatoApi public fun resolveTickOptions(options: TickOptions): ResolvedTickOptions {
     return ResolvedTickOptions(
         isPlaying = options.isPlaying,
         eventCreationTime = options.eventCreationTime ?: NO_PLAYER_SNAPSHOT,
@@ -394,7 +396,7 @@ private fun resolvePlaybackRate(rate: Double?): Double {
  * arithmetic can be checked against the degenerate cases, which is where it went wrong: an
  * unrendered container answers zero to every measurement.
  */
-data class ScrollPaddingMeasurements(
+@InternalBraccatoApi public data class ScrollPaddingMeasurements(
     val viewportHeight: Double,
     val targetScrollRatio: Double,
     /** The container's own height with whatever bottom padding it currently carries taken back off. */
@@ -406,7 +408,7 @@ data class ScrollPaddingMeasurements(
     val footerHeight: Double,
 )
 
-data class ScrollPadding(val top: Double, val bottom: Double)
+@InternalBraccatoApi public data class ScrollPadding(val top: Double, val bottom: Double)
 
 /**
  * Sizes the padding above the first line and below the last one so either can sit at the view's
@@ -419,7 +421,7 @@ data class ScrollPadding(val top: Double, val bottom: Double)
  * space it alone demands below the last line is always knowable, and it is the floor. Over-padding
  * costs nothing visible; under-padding strands the end of every song.
  */
-fun computeScrollPadding(measurements: ScrollPaddingMeasurements): ScrollPadding {
+@InternalBraccatoApi public fun computeScrollPadding(measurements: ScrollPaddingMeasurements): ScrollPadding {
     val viewportHeight = measurements.viewportHeight
     val targetScrollRatio = measurements.targetScrollRatio
     val contentHeight = measurements.contentHeight
@@ -447,7 +449,7 @@ fun computeScrollPadding(measurements: ScrollPaddingMeasurements): ScrollPadding
  * `getTargetScrollRatio`: a ratio the view itself was given wins, clamped to the viewport, and the
  * theme setting stands in for it otherwise.
  */
-fun targetScrollRatio(scoped: Double? = null): Double {
+@InternalBraccatoApi public fun targetScrollRatio(scoped: Double? = null): Double {
     return if (scoped != null && scoped.isFinite()) max(0.0, min(1.0, scoped))
     else CoreSettings.SCROLL_POS_OFFSET_RATIO.getNumberValue()
 }
@@ -462,7 +464,7 @@ fun targetScrollRatio(scoped: Double? = null): Double {
  * @param accumulatedTime Seconds the song has played since the lyrics appeared.
  * @return The scroll position, or null when there is nothing to scroll.
  */
-fun passiveScrollTarget(accumulatedTime: Double, lineCount: Int, maxScroll: Double): Double? {
+internal fun passiveScrollTarget(accumulatedTime: Double, lineCount: Int, maxScroll: Double): Double? {
     if (lineCount == 0 || maxScroll <= 0) return null
 
     val scrollDuration = lineCount * CoreSettings.PASSIVE_SECONDS_PER_LINE.getNumberValue()
@@ -494,7 +496,7 @@ fun passiveScrollTarget(accumulatedTime: Double, lineCount: Int, maxScroll: Doub
  * Where passive scrolling picks up after the user scrolled it: the accumulated time that puts the
  * cycle at the position they left the view at.
  */
-fun passiveScrollResumeTime(scrollTop: Double, maxScroll: Double, lineCount: Int): Double? {
+internal fun passiveScrollResumeTime(scrollTop: Double, maxScroll: Double, lineCount: Int): Double? {
     if (maxScroll <= 0) return null
     val ratio = scrollTop / maxScroll
     return ratio * lineCount * CoreSettings.PASSIVE_SECONDS_PER_LINE.getNumberValue()

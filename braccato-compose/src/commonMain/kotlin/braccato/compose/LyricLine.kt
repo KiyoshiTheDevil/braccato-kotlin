@@ -53,12 +53,12 @@ import braccato.core.buildTranslation
 
 /** What hangs under a line. `injectTranslation` and `injectRomanization` upstream. Equal when it shows the same. */
 @Immutable
-data class LineDecorations(
+public data class LineDecorations(
     val translation: BuiltTranslation? = null,
     val romanization: BuiltRomanization? = null,
 ) {
-    companion object {
-        val None = LineDecorations()
+    public companion object {
+        public val None: LineDecorations = LineDecorations()
     }
 }
 
@@ -66,7 +66,7 @@ data class LineDecorations(
  * The decorations a line's own lyric carries: its first translation and its romanization, timed when
  * the provider timed it. A host that streams them in later passes its own instead.
  */
-fun lyricDecorations(line: BuiltLine): LineDecorations {
+public fun lyricDecorations(line: BuiltLine): LineDecorations {
     val content = line.content ?: return LineDecorations.None
     val lyric = line.lyric
     val translationText = lyric.translation?.text ?: lyric.translations?.values?.firstOrNull()

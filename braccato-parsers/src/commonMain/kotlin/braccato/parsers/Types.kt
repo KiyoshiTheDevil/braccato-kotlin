@@ -10,16 +10,16 @@ import braccato.types.LyricSyncType
 
 // Published by this package first, under the shorter name. Same union as `LyricSyncType`, kept as an
 // alias so existing imports resolve.
-typealias SyncType = LyricSyncType
+public typealias SyncType = LyricSyncType
 
 /** Song-level credits a lyrics file carries alongside its lines. */
-data class LyricMetadata(
+public data class LyricMetadata(
     val songwriters: List<String>,
 )
 
 // The parser contract belongs to this package, so it stays declared here.
-interface LyricParser {
-    fun parse(input: String, duration: Double = 0.0): List<Lyric>
-    fun metadata(input: String): LyricMetadata
-    fun detect(input: String): Boolean
+public interface LyricParser {
+    public fun parse(input: String, duration: Double = 0.0): List<Lyric>
+    public fun metadata(input: String): LyricMetadata
+    public fun detect(input: String): Boolean
 }

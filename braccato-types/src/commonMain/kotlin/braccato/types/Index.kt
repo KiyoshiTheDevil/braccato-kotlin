@@ -13,7 +13,7 @@ package braccato.types
 
 // -- Lyric data --------------------------------------------
 
-data class LyricPart(
+public data class LyricPart(
     var startTimeMs: Double,
     var words: String,
     var durationMs: Double,
@@ -22,12 +22,12 @@ data class LyricPart(
 )
 
 /** The single-language shape `translation` had before `translations` existed. */
-data class LyricTranslation(
+public data class LyricTranslation(
     val text: String,
     val lang: String,
 )
 
-data class Lyric(
+public data class Lyric(
     var startTimeMs: Double,
     var words: String,
     var durationMs: Double,
@@ -45,7 +45,7 @@ data class Lyric(
 // an alias of this. The longer name is the one `@braccato/core` uses, and it is the one that reads
 // unambiguously beside a provider's sync quality ("syllable" | "word" | "line" | "unsynced"), which
 // is a different axis measured in the same vocabulary.
-enum class LyricSyncType(val value: String) {
+public enum class LyricSyncType(public val value: String) {
     RICHSYNC("richsync"),
     SYNCED("synced"),
     NONE("none"),

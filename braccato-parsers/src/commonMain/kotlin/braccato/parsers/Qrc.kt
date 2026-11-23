@@ -8,7 +8,7 @@ import kotlin.math.abs
 import kotlin.math.max
 
 /** Song metadata, used to drop opening lines that only echo the title or the artist. */
-data class QrcMetadata(
+public data class QrcMetadata(
     val title: String? = null,
     val artist: String? = null,
 )
@@ -210,7 +210,7 @@ private fun unwrapEnvelope(qrcXml: String): String {
  * `metadata` is optional and only used to drop opening lines that echo the song title or artist,
  * which QQ Music routinely prepends to a lyric body.
  */
-fun parseQRC(qrcXml: String, songDurationMs: Double, metadata: QrcMetadata? = null): List<Lyric> {
+public fun parseQRC(qrcXml: String, songDurationMs: Double, metadata: QrcMetadata? = null): List<Lyric> {
     if (qrcXml.isEmpty()) return emptyList()
 
     val lyricContent = unwrapEnvelope(qrcXml)
@@ -296,7 +296,7 @@ private fun readSongwriters(qrcXml: String): List<String> {
     return uniqueNames(names)
 }
 
-object QRCParser : LyricParser {
+public object QRCParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isQrc(input)
     }

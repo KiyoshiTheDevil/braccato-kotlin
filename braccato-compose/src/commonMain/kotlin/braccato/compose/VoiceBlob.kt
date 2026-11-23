@@ -43,34 +43,34 @@ import kotlinx.coroutines.launch
  * colour for each, which tints their capsule. Shown only when two voices or more have a name (a singer and
  * their group count).
  */
-class VoiceLabels(
-    val names: Map<String, String>,
-    val tint: ((agent: String) -> Color?)? = null,
+public class VoiceLabels(
+    public val names: Map<String, String>,
+    public val tint: ((agent: String) -> Color?)? = null,
     /** How far above the view's bottom edge it sits, clear of what the host lays over that edge. */
-    val bottom: androidx.compose.ui.unit.Dp = 16.dp,
+    public val bottom: androidx.compose.ui.unit.Dp = 16.dp,
     /**
      * What lies behind the lyrics, for the capsule to blur too: over a video, its picture. The host
      * records it into this layer and tells where the layer stands on screen ([backdropOrigin], in root
      * coordinates). Without it the capsule blurs only the lyrics behind it.
      */
-    val backdrop: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
-    val backdropOrigin: () -> Offset = { Offset.Zero },
+    public val backdrop: androidx.compose.ui.graphics.layer.GraphicsLayer? = null,
+    public val backdropOrigin: () -> Offset = { Offset.Zero },
     /**
      * Added to the capsule's own darkening (0.22), for a bright picture behind it. Above 0 it is laid
      * over the blurred backdrop instead of the light frost.
      */
-    val darken: Float = 0f,
+    public val darken: Float = 0f,
     /** The capsule's size against its own (13 sp names, 26 dp high): 1 leaves it. */
-    val scale: Float = 1f,
+    public val scale: Float = 1f,
 ) {
-    val useful: Boolean get() = names.size >= 2
+    public val useful: Boolean get() = names.size >= 2
 
     /**
      * How far [BraccatoStage] raises its floor for the capsule's own line: the capsule, its distance
      * from the bottom, and a little air. A host drawing a second stage beside it (a shadow) without
      * voices raises that one by the same.
      */
-    val stageRoom: androidx.compose.ui.unit.Dp get() = if (useful) 26.dp * scale + bottom + 10.dp else 0.dp
+    public val stageRoom: androidx.compose.ui.unit.Dp get() = if (useful) 26.dp * scale + bottom + 10.dp else 0.dp
 }
 
 /**

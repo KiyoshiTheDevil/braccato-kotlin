@@ -9,6 +9,6 @@ private val PARSER_FOR_FORMAT: Map<LyricFormat, LyricParser> = mapOf(
     LyricFormat.PLAIN to PlainParser,
 )
 
-fun detectParser(input: String): LyricParser {
+public fun detectParser(input: String): LyricParser {
     return PARSER_FOR_FORMAT.getValue(detectFormat(input))
 }

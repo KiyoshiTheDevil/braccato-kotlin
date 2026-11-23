@@ -5,7 +5,7 @@ import braccato.types.Lyric
 
 private const val DEFAULT_INSTRUMENTAL_GAP_MS = 5000.0
 
-data class InstrumentalBreakOptions(
+public data class InstrumentalBreakOptions(
     /** Silence longer than this becomes an instrumental line. Defaults to 5000. */
     val instrumentalGapMs: Double? = null,
 )
@@ -19,7 +19,7 @@ data class InstrumentalBreakOptions(
  *
  * A null `gapThreshold` is upstream's `undefined`, which falls back to the default.
  */
-fun insertInstrumentalBreaks(
+public fun insertInstrumentalBreaks(
     lyrics: List<Lyric>,
     songDurationMs: Double,
     gapThreshold: Double? = DEFAULT_INSTRUMENTAL_GAP_MS,

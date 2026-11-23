@@ -70,7 +70,7 @@ import kotlin.time.TimeSource
 
 /** One reading of the player. */
 @Immutable
-data class PlaybackSnapshot(
+public data class PlaybackSnapshot(
     /** Seconds into the song. */
     val timeS: Double,
     val isPlaying: Boolean,
@@ -84,22 +84,22 @@ data class PlaybackSnapshot(
 
 /** What the view reports back, and the one thing a host can ask of it. */
 @Stable
-class BraccatoLyricsState {
+public class BraccatoLyricsState {
     /** The user scrolled the view away and autoscroll waits: offer the way back. */
-    var resumeAffordanceVisible by mutableStateOf(false)
+    public var resumeAffordanceVisible: Boolean by mutableStateOf(false)
         internal set
 
     internal var timeline: LyricsTimeline? = null
 
     /** Autoscroll back, now. */
-    fun resumeAutoscroll() {
+    public fun resumeAutoscroll() {
         timeline?.resumeAutoscroll()
         resumeAffordanceVisible = false
     }
 }
 
 @Composable
-fun rememberBraccatoLyricsState(): BraccatoLyricsState = remember { BraccatoLyricsState() }
+public fun rememberBraccatoLyricsState(): BraccatoLyricsState = remember { BraccatoLyricsState() }
 
 /** The lyric time and the wall clock, as of the last frame. Read while drawing. */
 internal class LyricClock {
@@ -173,7 +173,7 @@ private const val LIVE_LEAD_S = 1.0
  *   `.blyrics-footer`: the place for where the lyrics came from.
  */
 @Composable
-fun BraccatoLyrics(
+public fun BraccatoLyrics(
     lyrics: BuiltLyrics,
     playback: () -> PlaybackSnapshot,
     modifier: Modifier = Modifier,

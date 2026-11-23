@@ -8,11 +8,11 @@ package braccato.core
 import kotlin.math.max
 import kotlin.math.min
 
-enum class StageItemKind { LINE, BLANK, INSTRUMENTAL, CREDITS }
+public enum class StageItemKind { LINE, BLANK, INSTRUMENTAL, CREDITS }
 
-enum class StageRole { CURRENT, PREVIOUS, QUEUED, GONE }
+public enum class StageRole { CURRENT, PREVIOUS, QUEUED, GONE }
 
-data class StageItem(
+public data class StageItem(
     val kind: StageItemKind,
     /** Seconds. */
     val start: Double,
@@ -20,11 +20,11 @@ data class StageItem(
     val end: Double,
 )
 
-const val STAGE_LEAD_S = 0.5
-const val STAGE_HANDOFF_S = 0.12
-const val STAGE_OVERLAP_S = 0.15
+internal const val STAGE_LEAD_S = 0.5
+internal const val STAGE_HANDOFF_S = 0.12
+internal const val STAGE_OVERLAP_S = 0.15
 
-fun overlapsPrevious(items: List<StageItem>, index: Int): Boolean {
+internal fun overlapsPrevious(items: List<StageItem>, index: Int): Boolean {
     val previous = items.getOrNull(index - 1)
     return previous != null &&
         previous.kind == StageItemKind.LINE &&
@@ -32,7 +32,7 @@ fun overlapsPrevious(items: List<StageItem>, index: Int): Boolean {
         items[index].start < previous.end - STAGE_OVERLAP_S
 }
 
-fun stageEnterTimes(items: List<StageItem>): List<Double> {
+internal fun stageEnterTimes(items: List<StageItem>): List<Double> {
     return items.mapIndexed { index, item ->
         val early = item.start - STAGE_LEAD_S
         val previous = items.getOrNull(index - 1)
@@ -45,7 +45,7 @@ fun stageEnterTimes(items: List<StageItem>): List<Double> {
     }
 }
 
-fun planStage(items: List<StageItem>, timeS: Double): List<StageRole> {
+public fun planStage(items: List<StageItem>, timeS: Double): List<StageRole> {
     val enterTimes = stageEnterTimes(items)
     var current = -1
     enterTimes.forEachIndexed { index, enterTime ->
@@ -63,7 +63,7 @@ fun planStage(items: List<StageItem>, timeS: Double): List<StageRole> {
     return roles
 }
 
-data class StageMetrics(
+public data class StageMetrics(
     val height: Double,
     val left: Double,
     val width: Double,
@@ -71,38 +71,38 @@ data class StageMetrics(
     val originX: Double,
 )
 
-data class StageGeometry(
+public data class StageGeometry(
     val stageHeight: Double,
     val gap: Double,
     val activeScale: Double,
 )
 
-data class StagePlacement(
+public data class StagePlacement(
     val y: Double,
     val visible: Boolean,
 )
 
-data class StageBox(
+public data class StageBox(
     val x: Double,
     val y: Double,
     val width: Double,
     val height: Double,
 )
 
-data class StageSpanRect(
+internal data class StageSpanRect(
     val x: Double,
     val width: Double,
 )
 
-data class StagePadding(val left: Double, val right: Double)
+internal data class StagePadding(val left: Double, val right: Double)
 
-data class StageSpan(val left: Double, val width: Double)
+internal data class StageSpan(val left: Double, val width: Double)
 
 /**
  * A wrapped `fit-content` box fills the width offered, so the plate follows the text instead. The rects
  * miss printed `::before` labels, so the span is widened to what the alignment guarantees.
  */
-fun stageTextSpan(
+internal fun stageTextSpan(
     offsetLeft: Double,
     offsetWidth: Double,
     box: StageSpanRect,
@@ -152,13 +152,13 @@ private fun unionBox(box: StageBox?, next: StageBox): StageBox {
 }
 
 /** Where a line waits below the floor, and where it rises from as it enters. */
-fun queuedStageY(stageHeight: Double, height: Double, gap: Double): Double {
+internal fun queuedStageY(stageHeight: Double, height: Double, gap: Double): Double {
     return stageHeight - height + gap
 }
 
-data class StageLayout(val placements: List<StagePlacement>, val box: StageBox?)
+public data class StageLayout(val placements: List<StagePlacement>, val box: StageBox?)
 
-fun layoutStage(
+public fun layoutStage(
     roles: List<StageRole>,
     items: List<StageItem>,
     metrics: List<StageMetrics>,

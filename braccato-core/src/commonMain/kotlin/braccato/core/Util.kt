@@ -2,20 +2,22 @@
 // layout reads are browser questions with no counterpart here.
 package braccato.core
 
+import braccato.types.internal.InternalBraccatoApi
+
 import braccato.types.internal.jsParseFloat
 import braccato.types.internal.jsRound
 import kotlin.math.max
 import kotlin.math.min
 
-fun clamp(value: Double, min: Double, max: Double): Double {
+internal fun clamp(value: Double, min: Double, max: Double): Double {
     return max(min, min(max, value))
 }
 
-fun positiveModulo(value: Double, divisor: Double): Double {
+internal fun positiveModulo(value: Double, divisor: Double): Double {
     return ((value % divisor) + divisor) % divisor
 }
 
-fun roundedMs(value: Double): Double {
+internal fun roundedMs(value: Double): Double {
     return jsRound(value * 10) / 10
 }
 
@@ -24,7 +26,7 @@ fun roundedMs(value: Double): Double {
  *
  * @return Duration in milliseconds
  */
-fun toMs(cssDuration: String): Double {
+@InternalBraccatoApi public fun toMs(cssDuration: String): Double {
     if (cssDuration.isEmpty()) return 0.0
     if (cssDuration.endsWith("ms")) {
         return jsParseFloat(cssDuration.dropLast(2))

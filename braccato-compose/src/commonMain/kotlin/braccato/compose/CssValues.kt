@@ -12,7 +12,7 @@ import braccato.types.internal.jsParseFloat
 import kotlin.math.roundToInt
 
 /** CSS's named easings. */
-object CssEasing {
+internal object CssEasing {
     val Ease: Easing = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
     val EaseIn: Easing = CubicBezierEasing(0.42f, 0f, 1f, 1f)
     val EaseOut: Easing = CubicBezierEasing(0f, 0f, 0.58f, 1f)
@@ -22,7 +22,7 @@ object CssEasing {
 private val CUBIC_BEZIER = Regex("""^cubic-bezier\(\s*([^,]+),\s*([^,]+),\s*([^,]+),\s*([^)]+)\)$""")
 
 /** A CSS easing function, or null for one this does not read (`steps()`, `linear()` with stops). */
-fun parseCssEasing(value: String): Easing? {
+internal fun parseCssEasing(value: String): Easing? {
     return when (val v = value.trim().lowercase()) {
         "linear" -> LinearEasing
         "ease" -> CssEasing.Ease
@@ -38,7 +38,7 @@ fun parseCssEasing(value: String): Easing? {
 }
 
 /** A CSS duration in milliseconds (`0.33s`, `150ms`), or null. */
-fun parseCssDurationMs(value: String): Double? {
+internal fun parseCssDurationMs(value: String): Double? {
     val v = value.trim()
     if (!v.endsWith("s")) return null
     val ms = toMs(v)
@@ -48,7 +48,7 @@ fun parseCssDurationMs(value: String): Double? {
 /**
  * A CSS length in pixels. `em` is relative to [emPx], `rem` to [remPx]. A bare number reads as pixels.
  */
-fun parseCssLengthPx(value: String, emPx: Double, remPx: Double = 16.0): Double? {
+internal fun parseCssLengthPx(value: String, emPx: Double, remPx: Double = 16.0): Double? {
     val v = value.trim()
     val number = jsParseFloat(v)
     if (number.isNaN()) return null
@@ -61,7 +61,7 @@ fun parseCssLengthPx(value: String, emPx: Double, remPx: Double = 16.0): Double?
 }
 
 /** A CSS number, or null. */
-fun parseCssNumber(value: String): Double? {
+internal fun parseCssNumber(value: String): Double? {
     val number = jsParseFloat(value.trim())
     return if (number.isNaN()) null else number
 }
@@ -126,7 +126,7 @@ private fun hslToColor(h: Double, s: Double, l: Double, a: Double): Color {
  * (read as sRGB, which differs only in how saturated the most saturated colours are), and a few
  * names. Null for anything else.
  */
-fun parseCssColor(value: String): Color? {
+internal fun parseCssColor(value: String): Color? {
     val v = value.trim().lowercase()
     NAMED_COLORS[v]?.let { return it }
 
@@ -172,7 +172,7 @@ private val COMMENT = Regex("""/\*[\s\S]*?\*/""")
  * Every `--blyrics-*` custom property a stylesheet declares, last declaration winning, wherever it
  * is declared. A theme's rules for particular lines are flattened into one value per property.
  */
-fun readCustomProperties(css: String): Map<String, String> {
+internal fun readCustomProperties(css: String): Map<String, String> {
     val out = LinkedHashMap<String, String>()
     for (match in CUSTOM_PROPERTY.findAll(css.replace(COMMENT, ""))) {
         out[match.groupValues[1]] = match.groupValues[2].trim()

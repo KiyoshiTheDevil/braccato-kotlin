@@ -23,28 +23,28 @@ private val keyToSettingMap: MutableMap<String, Setting> = LinkedHashMap()
 
 // -- Setting --------------------------------------------
 
-enum class SettingType { NUMBER, BOOLEAN, STRING }
+public enum class SettingType { NUMBER, BOOLEAN, STRING }
 
-class Setting internal constructor(
-    val type: SettingType,
+public class Setting internal constructor(
+    public val type: SettingType,
     value: Any,
-    val defaultValue: Any,
-    val requiresLyricReload: Boolean,
+    public val defaultValue: Any,
+    public val requiresLyricReload: Boolean,
 ) {
     /** A `Double`, `Boolean` or `String`, matching [type]. */
-    var value: Any = value
+    public var value: Any = value
         internal set
     private var manuallySet = false
 
-    fun getNumberValue(): Double = value as Double
+    public fun getNumberValue(): Double = value as Double
 
-    fun getBooleanValue(): Boolean = value as Boolean
+    public fun getBooleanValue(): Boolean = value as Boolean
 
-    fun getStringValue(): String = value as String
+    public fun getStringValue(): String = value as String
 
-    fun isManuallySet(): Boolean = manuallySet
+    public fun isManuallySet(): Boolean = manuallySet
 
-    fun setManuallySet(manuallySet: Boolean) {
+    public fun setManuallySet(manuallySet: Boolean) {
         this.manuallySet = manuallySet
     }
 }
@@ -62,7 +62,7 @@ private val THEME_SETTING_PATTERN = Regex("""(blyrics-[\w-]+)$WS*=$WS*([^;]+);""
  * winning. Depends on nothing, so a consumer that compiles a theme somewhere the renderer does not
  * run can read the settings out of it on its own.
  */
-fun parseThemeConfig(css: String): Map<String, String> {
+public fun parseThemeConfig(css: String): Map<String, String> {
     val config = LinkedHashMap<String, String>()
 
     for (comment in THEME_COMMENT_PATTERN.findAll(css)) {
@@ -86,17 +86,17 @@ private fun register(key: String, type: SettingType, defaultValue: Any, requires
     return setting
 }
 
-fun registerThemeSetting(key: String, defaultValue: Double, requiresLyricReload: Boolean = false): Setting =
+internal fun registerThemeSetting(key: String, defaultValue: Double, requiresLyricReload: Boolean = false): Setting =
     register(key, SettingType.NUMBER, defaultValue, requiresLyricReload)
 
-fun registerThemeSetting(key: String, defaultValue: Boolean, requiresLyricReload: Boolean = false): Setting =
+internal fun registerThemeSetting(key: String, defaultValue: Boolean, requiresLyricReload: Boolean = false): Setting =
     register(key, SettingType.BOOLEAN, defaultValue, requiresLyricReload)
 
-fun registerThemeSetting(key: String, defaultValue: String, requiresLyricReload: Boolean = false): Setting =
+internal fun registerThemeSetting(key: String, defaultValue: String, requiresLyricReload: Boolean = false): Setting =
     register(key, SettingType.STRING, defaultValue, requiresLyricReload)
 
 // Returns whether a setting flagged requiresLyricReload changed, so the caller can reload.
-fun setThemeSettings(map: Map<String, String>): Boolean {
+public fun setThemeSettings(map: Map<String, String>): Boolean {
     CoreSettings.ensureRegistered()
     var needsLyricReload = false
 
@@ -150,7 +150,7 @@ fun setThemeSettings(map: Map<String, String>): Boolean {
  * that answer the same here built their lines the same way, so a line built under one can stand in
  * for the same line built under the other.
  */
-fun lyricBuildSettingsKey(): String {
+internal fun lyricBuildSettingsKey(): String {
     CoreSettings.ensureRegistered()
     val values = mutableListOf<String>()
     for ((key, setting) in keyToSettingMap) {

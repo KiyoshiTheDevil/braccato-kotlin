@@ -89,7 +89,7 @@ private fun cjkRoleParts(normalized: String): List<String> {
 }
 
 /** Whether the text before a colon names a credit role, such as `作词` or `Produced by`, rather than a singer. */
-fun isCreditRole(role: String): Boolean {
+internal fun isCreditRole(role: String): Boolean {
     val n = normalizeRole(role)
     if (n in CREDIT_ROLES) return true
     val parts = cjkRoleParts(n)
@@ -103,19 +103,19 @@ private fun isSongwriterRole(role: String): Boolean {
 }
 
 /** Whether a lyric line's text is a credit, such as `作词：周杰伦`, rather than a sung line. */
-fun isCreditLine(text: String): Boolean {
+internal fun isCreditLine(text: String): Boolean {
     val credit = CREDIT_LINE_REGEX.find(text.jsTrim())
     return credit != null && isCreditRole(credit.groupValues[1])
 }
 
 /** The names a songwriting credit line lists, or none when the line credits anything else. */
-fun songwritersInCreditLine(text: String): List<String> {
+internal fun songwritersInCreditLine(text: String): List<String> {
     val credit = CREDIT_LINE_REGEX.find(text.jsTrim())
     if (credit == null || !isSongwriterRole(credit.groupValues[1])) return emptyList()
     return splitCreditNames(credit.groupValues[2])
 }
 
-fun splitCreditNames(value: String): List<String> {
+internal fun splitCreditNames(value: String): List<String> {
     return value
         .split(FREE_TEXT_SEPARATORS)
         .map { name -> name.jsTrim() }
@@ -123,7 +123,7 @@ fun splitCreditNames(value: String): List<String> {
 }
 
 /** Trims, drops empty names and keeps the first of each exact duplicate, in order. */
-fun uniqueNames(names: Iterable<String>): List<String> {
+internal fun uniqueNames(names: Iterable<String>): List<String> {
     val seen = LinkedHashSet<String>()
     for (name in names) {
         val trimmed = name.jsTrim()

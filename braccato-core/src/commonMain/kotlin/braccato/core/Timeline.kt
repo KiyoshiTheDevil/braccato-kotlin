@@ -13,6 +13,8 @@
 // bundle. Here each timeline owns one, so two views cannot replay each other's clock.
 package braccato.core
 
+import braccato.types.internal.InternalBraccatoApi
+
 import braccato.types.LyricSyncType
 import kotlin.math.abs
 import kotlin.math.max
@@ -25,7 +27,7 @@ import kotlin.math.min
  * `--blyrics-timing-offset`, `--blyrics-scroll-timing-offset`). Defaults are styles/variables.css's.
  * In seconds.
  */
-data class TimingOffsets(
+public data class TimingOffsets(
     val richsync: Double = 0.15,
     val line: Double = 0.115,
     val scroll: Double = 0.5,
@@ -35,7 +37,7 @@ data class TimingOffsets(
  * Seconds to add to the player time to get the lyric time a view renders: the theme's offset and the
  * trim for its sync type, less the global and per-song offsets. `lyricClockShiftS` upstream.
  */
-fun lyricClockShiftS(syncType: LyricSyncType, offsets: TimingOffsets, options: ResolvedTickOptions): Double {
+@InternalBraccatoApi public fun lyricClockShiftS(syncType: LyricSyncType, offsets: TimingOffsets, options: ResolvedTickOptions): Double {
     val syncTypeShiftS = if (syncType == LyricSyncType.RICHSYNC) {
         offsets.richsync - options.richsyncOffsetTrim
     } else {
@@ -47,7 +49,7 @@ fun lyricClockShiftS(syncType: LyricSyncType, offsets: TimingOffsets, options: R
 // -- Playback clock --------------------------------------------
 
 /** What the clock made of one reading. */
-data class ClockReading(
+public data class ClockReading(
     /** The time to render, extrapolated from the snapshot and smoothed. Seconds. */
     val time: Double,
     /** The time moved further than playback explains: a seek. */
@@ -59,7 +61,7 @@ data class ClockReading(
 )
 
 /** How far a held reading is carried forward before the clock waits for the source. */
-const val MAX_HELD_LEAD_S = 0.25
+internal const val MAX_HELD_LEAD_S = 0.25
 
 /**
  * The last player snapshot, and how the next one is read against it.
@@ -75,13 +77,13 @@ const val MAX_HELD_LEAD_S = 0.25
  *   running the swipe backwards. A source that moves every frame never repeats a reading, so this
  *   changes nothing for it. On by default.
  */
-class PlaybackClock(
+public class PlaybackClock(
     private val smoothSteppedClock: Boolean = false,
     private val interpolateHeldReadings: Boolean = true,
 ) {
-    var lastTime = 0.0
+    public var lastTime: Double = 0.0
         private set
-    var lastPlayState = false
+    public var lastPlayState: Boolean = false
         internal set
     private var lastEventCreationTime = NO_PLAYER_SNAPSHOT
     private var smoothedTime = 0.0
@@ -94,7 +96,7 @@ class PlaybackClock(
      * Forgets the last player snapshot, so the next tick is treated as the first one of a new song
      * rather than as a jump away from the previous one.
      */
-    fun reset() {
+    public fun reset() {
         lastTime = 0.0
         lastPlayState = false
         lastEventCreationTime = NO_PLAYER_SNAPSHOT
@@ -103,7 +105,7 @@ class PlaybackClock(
         lastShown = Double.NaN
     }
 
-    fun read(currentTime: Double, options: ResolvedTickOptions, now: Double): ClockReading {
+    public fun read(currentTime: Double, options: ResolvedTickOptions, now: Double): ClockReading {
         val eventCreationTime = options.eventCreationTime
         val isPlaying = options.isPlaying
 
@@ -170,7 +172,7 @@ class PlaybackClock(
  * Whether a line is in the scroll's active set at a scroll time: from just before it starts until
  * the next line starts or it ends, whichever is later. Upstream marks these `blyrics--active`.
  */
-fun isLineActive(lines: List<TimedPart>, index: Int, lyricScrollTime: Double, earlyScrollConsiderS: Double): Boolean {
+internal fun isLineActive(lines: List<TimedPart>, index: Int, lyricScrollTime: Double, earlyScrollConsiderS: Double): Boolean {
     val line = lines[index]
     val nextTime = lines.getOrNull(index + 1)?.time ?: Double.POSITIVE_INFINITY
     return lyricScrollTime >= line.time - earlyScrollConsiderS &&
@@ -178,7 +180,7 @@ fun isLineActive(lines: List<TimedPart>, index: Int, lyricScrollTime: Double, ea
 }
 
 /** When a line stops being animated: the next line's start, or its own end and a little more. */
-fun effectiveEndTime(lines: List<TimedPart>, index: Int): Double {
+@InternalBraccatoApi public fun effectiveEndTime(lines: List<TimedPart>, index: Int): Double {
     val line = lines[index]
     val nextTime = lines.getOrNull(index + 1)?.time ?: Double.POSITIVE_INFINITY
     return max(nextTime, line.time + line.duration + 0.05)
@@ -190,14 +192,14 @@ fun effectiveEndTime(lines: List<TimedPart>, index: Int): Double {
  * @param leadS How early before its start the line counts. Upstream sets animations up two seconds
  *   early while playing, which only matters to the Web Animations it creates; zero is the line's own start.
  */
-fun isLineAnimating(lines: List<TimedPart>, index: Int, currentTime: Double, leadS: Double = 0.0): Boolean {
+internal fun isLineAnimating(lines: List<TimedPart>, index: Int, currentTime: Double, leadS: Double = 0.0): Boolean {
     return currentTime + leadS >= lines[index].time && currentTime < effectiveEndTime(lines, index)
 }
 
 // -- Scroll --------------------------------------------
 
 /** Where the renderer has laid the lines out, in the scroll content's coordinates. Pixels. */
-data class ScrollViewport(
+public data class ScrollViewport(
     val height: Double,
     val scrollTop: Double,
     val maxScrollTop: Double,
@@ -212,9 +214,9 @@ data class ScrollViewport(
     val targetScrollRatio: Double = targetScrollRatio(),
 )
 
-data class ScrollItem(val position: Double, val height: Double)
+public data class ScrollItem(val position: Double, val height: Double)
 
-enum class ScrollAction {
+public enum class ScrollAction {
     /** Leave the view where it is. */
     NONE,
 
@@ -225,7 +227,7 @@ enum class ScrollAction {
     COMMIT,
 }
 
-data class ScrollDecision(
+public data class ScrollDecision(
     val action: ScrollAction,
     /** Where the view should be, already clamped to what it can reach. */
     val targetScrollTop: Double,
@@ -244,7 +246,7 @@ data class ScrollDecision(
 
 // -- Frame --------------------------------------------
 
-enum class FrameStatus {
+public enum class FrameStatus {
     /** Paused at zero: nothing was decided. */
     SKIPPED,
 
@@ -258,7 +260,7 @@ enum class FrameStatus {
 }
 
 /** Everything one tick decided. Line indices are into [BuiltLyrics.lines]. */
-data class TimelineFrame(
+public data class TimelineFrame(
     val status: FrameStatus,
     /** The lyric time the lines are matched against, offsets applied. Seconds. */
     val lyricTime: Double = 0.0,
@@ -285,11 +287,11 @@ data class TimelineFrame(
  * One view's timeline: the clock, the selection, the scroll state. The renderer feeds it the playback
  * time once per frame and draws what it answers.
  */
-class LyricsTimeline(
-    val lyrics: BuiltLyrics,
-    val layout: LyricsLayout = LyricsLayout.SCROLL,
-    val offsets: TimingOffsets = TimingOffsets(),
-    val clock: PlaybackClock = PlaybackClock(),
+public class LyricsTimeline(
+    public val lyrics: BuiltLyrics,
+    public val layout: LyricsLayout = LyricsLayout.SCROLL,
+    public val offsets: TimingOffsets = TimingOffsets(),
+    public val clock: PlaybackClock = PlaybackClock(),
 ) {
     private val lines: List<BuiltLine> = lyrics.lines
 
@@ -309,14 +311,14 @@ class LyricsTimeline(
      * The user scrolled the view, which pauses autoscroll long enough to read where it landed.
      * Unsynced lyrics are drifting on their own rather than following the song, so they resume sooner.
      */
-    fun noteUserScroll(now: Double) {
+    public fun noteUserScroll(now: Double) {
         val isPassive = lyrics.syncType == LyricSyncType.NONE && !lyrics.noLyrics
         scrollResumeTime = now + (if (isPassive) PASSIVE_USER_SCROLL_RESUME_DELAY_MS else USER_SCROLL_RESUME_DELAY_MS)
         wasUserScrolling = true
     }
 
     /** The user asked for autoscroll back, now. */
-    fun resumeAutoscroll() {
+    public fun resumeAutoscroll() {
         scrollResumeTime = 0.0
     }
 
@@ -325,7 +327,7 @@ class LyricsTimeline(
      * in. The next tick scrolls to where the active lines now are, as upstream's `relayout` arranges by
      * marking the view as scrolled.
      */
-    fun noteRelayout() {
+    public fun noteRelayout() {
         wasUserScrolling = true
     }
 
@@ -337,7 +339,7 @@ class LyricsTimeline(
      * @param now Wall clock time in milliseconds, the clock `eventCreationTime` is on.
      * @param viewport Where the lines are laid out. Without one, nothing about scrolling is decided.
      */
-    fun tick(currentTimeS: Double, tickOptions: TickOptions, now: Double, viewport: ScrollViewport? = null): TimelineFrame {
+    public fun tick(currentTimeS: Double, tickOptions: TickOptions, now: Double, viewport: ScrollViewport? = null): TimelineFrame {
         val options = resolveTickOptions(tickOptions)
         val isPlaying = options.isPlaying
 
@@ -549,7 +551,7 @@ class LyricsTimeline(
     }
 
     /** `stageElements`: one item per line, then the credits when there are any. */
-    fun stageItems(): List<StageItem> {
+    public fun stageItems(): List<StageItem> {
         val items = mutableListOf<StageItem>()
         var lastEnd = 0.0
         for (line in lines) {

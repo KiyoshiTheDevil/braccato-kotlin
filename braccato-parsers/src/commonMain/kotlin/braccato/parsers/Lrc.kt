@@ -1,6 +1,8 @@
 // Port of packages/parsers/src/lrc.ts.
 package braccato.parsers
 
+import braccato.types.internal.InternalBraccatoApi
+
 import braccato.types.Lyric
 import braccato.types.LyricPart
 import braccato.types.internal.*
@@ -56,7 +58,7 @@ private class LrcEntry(val lyric: Lyric, val statedEnd: Double?)
  * with any before the first line or after a line's closing timestamp, become instrumental lines on
  * the same terms as the TTML gap fill.
  */
-fun parseLRC(
+public fun parseLRC(
     lrcText: String,
     songDurationMs: Double,
     options: InstrumentalBreakOptions = InstrumentalBreakOptions(),
@@ -219,7 +221,7 @@ fun parseLRC(
     return insertInstrumentalBreaks(sung, songDurationMs, options.instrumentalGapMs)
 }
 
-fun lrcFixers(lyrics: List<Lyric>) {
+@InternalBraccatoApi public fun lrcFixers(lyrics: List<Lyric>) {
     for (lyric in lyrics) {
         val parts = lyric.parts ?: continue
         for (i in 1 until parts.size) {
@@ -291,7 +293,7 @@ fun lrcFixers(lyrics: List<Lyric>) {
     }
 }
 
-object LRCParser : LyricParser {
+public object LRCParser : LyricParser {
     override fun detect(input: String): Boolean {
         return isLrc(input)
     }

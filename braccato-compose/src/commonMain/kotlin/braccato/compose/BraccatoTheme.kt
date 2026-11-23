@@ -21,7 +21,7 @@ import kotlin.math.max
 
 /** Which effects run. `--blyrics-animate-*` upstream, each 1 or 0. */
 @Immutable
-data class BraccatoAnimations(
+public data class BraccatoAnimations(
     val lineScale: Boolean = true,
     val wordWobble: Boolean = true,
     val highlightSwipe: Boolean = true,
@@ -32,11 +32,11 @@ data class BraccatoAnimations(
     val decorationEntry: Boolean = true,
 ) {
     /** `prefers-reduced-motion: reduce`: no zoom, no wobble, no moving fill. Fades and the swipe stay. */
-    fun reducedMotion() = copy(lineScale = false, wordWobble = false, instrumental = false, decorationEntry = false)
+    public fun reducedMotion(): BraccatoAnimations = copy(lineScale = false, wordWobble = false, instrumental = false, decorationEntry = false)
 }
 
 @Immutable
-data class BraccatoTheme(
+public data class BraccatoTheme(
     // -- Colors --
     /** `--blyrics-text-color`. Lines are drawn in it, the inactive ones at [inactiveOpacity]. */
     val textColor: Color = Color.White,
@@ -156,8 +156,8 @@ data class BraccatoTheme(
     /** `--blyrics-target-scroll-pos-ratio`, which upstream reads as a theme setting. */
     val targetScrollRatio: Double get() = CoreSettings.SCROLL_POS_OFFSET_RATIO.getNumberValue()
 
-    companion object {
-        val Default = BraccatoTheme()
+    public companion object {
+        public val Default: BraccatoTheme = BraccatoTheme()
 
         /**
          * Applies a compiled Better Lyrics theme: its `blyrics-*` comment settings go to the core's
@@ -167,14 +167,14 @@ data class BraccatoTheme(
          * @return The theme, and whether a setting the lines are built from changed, so the caller can
          *   build them again.
          */
-        fun fromCss(css: String, base: BraccatoTheme = Default): Pair<BraccatoTheme, Boolean> {
+        public fun fromCss(css: String, base: BraccatoTheme = Default): Pair<BraccatoTheme, Boolean> {
             val needsRebuild = setThemeSettings(parseThemeConfig(css))
             return base.withCustomProperties(readCustomProperties(css)) to needsRebuild
         }
     }
 
     /** This theme with whatever `--blyrics-*` properties it can read applied. */
-    fun withCustomProperties(properties: Map<String, String>): BraccatoTheme {
+    public fun withCustomProperties(properties: Map<String, String>): BraccatoTheme {
         var t = this
         val em = fontSize.value.toDouble()
         fun prop(name: String) = properties["--blyrics-$name"]

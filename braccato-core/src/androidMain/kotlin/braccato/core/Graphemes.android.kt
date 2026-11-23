@@ -4,7 +4,7 @@ import android.icu.text.BreakIterator
 
 // ICU's character instance follows the extended grapheme cluster rules, emoji sequences included,
 // which is what `Intl.Segmenter` follows.
-actual fun splitGraphemes(text: String): List<String> {
+internal actual fun splitGraphemes(text: String): List<String> {
     val iterator = BreakIterator.getCharacterInstance()
     iterator.setText(text)
     val out = mutableListOf<String>()
